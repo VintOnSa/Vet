@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Veterinaria Municipal — San Joaquín</title>
+
+    <!-- Tailwind CSS CDN: para prototipo visual -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            50: '#f3f6fa',
+                            100: '#e7edf5',
+                            200: '#cbd7e6',
+                            300: '#a5b8cf',
+                            400: '#7895b5',
+                            500: '#4d7097',
+                            600: '#365778',
+                            700: '#29445f',
+                            800: '#1f354a',
+                            900: '#172a3d',
+                            950: '#0d1b2a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+        body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        .module { display: none; }
+        .module.active { display: block; }
+        .nav-item.active {
+            background: rgba(255,255,255,.12);
+            color: white;
+            box-shadow: inset 3px 0 0 #60a5fa;
+        }
+        .modal { display: none; }
+        .modal.open { display: flex; }
+        .fade-in { animation: fadeIn .18s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .appointment-card, .pet-card { transition: .15s ease; }
+        .appointment-card:hover, .pet-card:hover {
+            transform: translateY(-1px);
+            border-color: #94a3b8;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, .07);
+        }
+        .sidebar-scroll { overflow-y: auto; }
+        @media (max-width: 900px) {
+            #sidebar { width: 76px; }
+            #sidebar .brand-text, #sidebar .nav-label, #sidebar .user-text { display: none; }
+            #main { margin-left: 76px; }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 text-slate-800">
+
+<!-- ========================= SIDEBAR ========================= -->
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-40 flex w-72 flex-col bg-navy-950 text-slate-300 shadow-2xl transition-all">
+
+    <div class="border-b border-white/10 px-5 py-6">
+        <div class="flex items-center gap-3">
+            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-xl font-bold text-white shadow-lg">
+                VM
+            </div>
+            <div class="brand-text min-w-0">
+                <p class="text-sm font-medium text-blue-300">Municipalidad de San Joaquín</p>
+                <h1 class="mt-0.5 text-lg font-bold leading-tight text-white">Veterinaria Municipal</h1>
+                <p class="mt-1 text-xs text-slate-500">Sistema de gestión veterinaria</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar-scroll flex-1 px-3 py-5">
+        <p class="nav-label mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">Principal</p>
+
+        <nav class="space-y-1">
+            <button class="nav-item active flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium hover:bg-white/10"
+                    data-module="inicio">
+                <span class="text-lg">⌂</span><span class="nav-label">Inicio / Agenda</span>
+            </button>
+
+            <button class="nav-item flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium hover:bg-white/10"
+                    data-module="mascotas">
+                <span class="text-lg">🐾</span><span class="nav-label">Mascotas</span>
+            </button>
+
+            <button class="nav-item flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium hover:bg-white/10"
+                    data-module="controles">
+                <span class="text-lg">▣</span><span class="nav-label">Controles</span>
+            </button>
+        </nav>
+
+        <p class="nav-label mb-2 mt-8 px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">Gestión</p>
+
+        <nav class="space-y-1">
+            <button class="nav-item flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium hover:bg-white/10"
+                    data-module="inscribir">
+                <span class="text-lg">＋</span><span class="nav-label">Inscribir mascota</span>
+            </button>
+        </nav>
+    </div>
+
+    <div class="border-t border-white/10 p-4">
+        <div class="flex items-center gap-3 rounded-xl bg-white/5 p-3">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500 font-bold text-white">
+                JP
+            </div>
+            <div class="user-text min-w-0">
+                <p class="truncate text-sm font-semibold text-white">Juanito Perez</p>
+                <p class="text-xs text-slate-400">Veterinario</p>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<!-- ========================= MAIN ========================= -->
+<main id="main" class="ml-72 min-h-screen transition-all">
+
+    <!-- ========================= INICIO ========================= -->
+    <section id="module-inicio" class="module active fade-in p-5 md:p-8">
+        <div class="mx-auto max-w-7xl">
+
+            <header class="mb-7">
+                <p class="text-sm font-medium text-blue-600">Miércoles, 12 de agosto de 2026</p>
+                <h2 class="mt-1 text-3xl font-bold tracking-tight text-slate-900">Hola, Juanito 👋</h2>
+                <p class="mt-1 text-slate-500">Aquí tienes un resumen de la jornada y las próximas atenciones.</p>
+            </header>
+
+            <!-- Buscador global -->
+            <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <span class="text-xl text-slate-400">⌕</span>
+                    <input id="globalSearch" type="text"
+                           placeholder="Buscar mascota por nombre, chip, dueño o ID de cita..."
+                           class="w-full bg-transparent text-sm outline-none placeholder:text-slate-400">
+                    <kbd class="hidden rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-400 md:block">Buscar</kbd>
+                </div>
+            </div>
+
+            <!-- Estadísticas -->
+            <div class="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-sm text-slate-500">Citas de hoy</p>
+                    <p class="mt-2 text-3xl font-bold text-slate-900">8</p>
+                    <p class="mt-1 text-xs text-emerald-600">3 atendidas</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-sm text-slate-500">Pendientes</p>
+                    <p class="mt-2 text-3xl font-bold text-slate-900">5</p>
+                    <p class="mt-1 text-xs text-amber-600">Próxima: 15:30</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-sm text-slate-500">Mascotas inscritas</p>
+                    <p class="mt-2 text-3xl font-bold text-slate-900">1.248</p>
+                    <p class="mt-1 text-xs text-slate-500">Registro municipal</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p class="text-sm text-slate-500">Controles este mes</p>
+                    <p class="mt-2 text-3xl font-bold text-slate-900">96</p>
+                    <p class="mt-1 text-xs text-blue-600">+12% vs. mes anterior</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+
+                <!-- Últimas citas -->
+                <div class="xl:col-span-2">
+                    <div class="mb-3 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-slate-900">Últimas citas</h3>
+                            <p class="text-sm text-slate-500">Atenciones más recientes de la jornada</p>
+                        </div>
+                        <button onclick="showModule('controles')" class="text-sm font-semibold text-blue-600 hover:text-blue-700">Ver todas →</button>
+                    </div>
+
+                    <div id="latestAppointments" class="space-y-3"></div>
+                </div>
+
+                <!-- Acciones rápidas -->
+                <div>
+                    <h3 class="mb-3 font-bold text-slate-900">Acciones rápidas</h3>
+                    <div class="grid gap-3">
+                        <button onclick="showModule('inscribir')"
+                                class="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
+                            <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-xl text-blue-600">＋</div>
+                            <p class="font-semibold text-slate-900">Inscribir mascota</p>
+                            <p class="mt-1 text-xs text-slate-500">Registrar una nueva mascota en el sistema.</p>
+                        </button>
+
+                        <button onclick="showModule('mascotas')"
+                                class="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
+                            <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-xl">🐾</div>
+                            <p class="font-semibold text-slate-900">Buscar mascota</p>
+                            <p class="mt-1 text-xs text-slate-500">Consultar ficha y controles anteriores.</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agenda extensa -->
+            <div class="mt-8">
+                <div class="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                    <div>
+                        <h3 class="font-bold text-slate-900">Agenda de hoy</h3>
+                        <p class="text-sm text-slate-500">Miércoles 12 de agosto · Todas las citas</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500">‹</button>
+                        <button class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700">Hoy</button>
+                        <button class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500">›</button>
+                    </div>
+                </div>
+                <div id="agendaList" class="space-y-3"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================= MASCOTAS ========================= -->
+    <section id="module-mascotas" class="module fade-in p-5 md:p-8">
+        <div class="mx-auto max-w-7xl">
+            <div class="mb-7 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+                <div>
+                    <p class="text-sm font-medium text-blue-600">Registro municipal</p>
+                    <h2 class="mt-1 text-3xl font-bold text-slate-900">Mascotas</h2>
+                    <p class="mt-1 text-slate-500">Busca y consulta las fichas de animales inscritos.</p>
+                </div>
+                <button onclick="showModule('inscribir')"
+                        class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+                    ＋ Inscribir mascota
+                </button>
+            </div>
+
+            <div class="mb-5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <span class="text-xl text-slate-400">⌕</span>
+                    <input id="petSearch" type="text" oninput="renderPets()"
+                           placeholder="Buscar por nombre, chip, raza o dueño..."
+                           class="w-full bg-transparent text-sm outline-none placeholder:text-slate-400">
+                </div>
+            </div>
+
+            <div class="mb-4 flex items-center justify-between">
+                <p id="petCount" class="text-sm text-slate-500"></p>
+                <select class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none">
+                    <option>Más recientes</option>
+                    <option>Nombre A-Z</option>
+                    <option>Nombre Z-A</option>
+                </select>
+            </div>
+
+            <div id="petsList" class="grid gap-3"></div>
+        </div>
+    </section>
+
+    <!-- ========================= CONTROLES ========================= -->
+    <section id="module-controles" class="module fade-in p-5 md:p-8">
+        <div class="mx-auto max-w-7xl">
+            <div class="mb-7">
+                <p class="text-sm font-medium text-blue-600">Historial clínico</p>
+                <h2 class="mt-1 text-3xl font-bold text-slate-900">Controles</h2>
+                <p class="mt-1 text-slate-500">Consulta las atenciones veterinarias registradas.</p>
+            </div>
+
+            <div class="mb-5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <span class="text-xl text-slate-400">⌕</span>
+                    <input type="text" oninput="renderControls(this.value)"
+                           placeholder="Buscar por mascota, chip, diagnóstico o ID de control..."
+                           class="w-full bg-transparent text-sm outline-none placeholder:text-slate-400">
+                </div>
+            </div>
+
+            <div id="controlsList" class="space-y-3"></div>
+        </div>
+    </section>
+
+    <!-- ========================= INSCRIBIR ========================= -->
+    <section id="module-inscribir" class="module fade-in p-5 md:p-8">
+        <div class="mx-auto max-w-4xl">
+            <div class="mb-7">
+                <p class="text-sm font-medium text-blue-600">Registro municipal</p>
+                <h2 class="mt-1 text-3xl font-bold text-slate-900">Inscribir mascota</h2>
+                <p class="mt-1 text-slate-500">Ingresa los datos básicos para crear una nueva ficha.</p>
+            </div>
+
+            <form id="registerPetForm" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+                <div class="mb-6 border-b border-slate-100 pb-5">
+                    <h3 class="font-bold text-slate-900">Información de la mascota</h3>
+                    <p class="mt-1 text-sm text-slate-500">Los campos marcados con * son obligatorios.</p>
+                </div>
+
+                <div class="grid gap-5 md:grid-cols-2">
+                    <label>
+                        <span class="mb-2 block text-sm font-medium text-slate-700">N° de chip *</span>
+                        <input name="chip" required placeholder="Ej. 981020000123456"
+                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                    </label>
+
+                    <label>
+                        <span class="mb-2 block text-sm font-medium text-slate-700">Nombre *</span>
+                        <input name="name" required placeholder="Ej. Bruno"
+                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                    </label>
+
+                    <label>
+                        <span class="mb-2 block text-sm font-medium text-slate-700">Raza</span>
+                        <input name="breed" placeholder="Ej. Labrador Retriever"
+                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                    </label>
+
+                    <label>
+                        <span class="mb-2 block text-sm font-medium text-slate-700">Edad *</span>
+                        <input name="age" required type="number" min="0" step="0.1" placeholder="Ej. 4"
+                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                    </label>
+
+                    <label>
+                        <span class="mb-2 block text-sm font-medium text-slate-700">Peso (kg) *</span>
+                        <input name="weight" required type="number" min="0" step="0.1" placeholder="Ej. 18.5"
+                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                    </label>
+
+                    <label>
+                        <span class="mb-2 block text-sm font-medium text-slate-700">Especie *</span>
+                        <select name="species" required
+                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                            <option value="">Seleccionar...</option>
+                            <option>Perro</option>
+                            <option>Gato</option>
+                            <option>Otro</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="my-7 border-t border-slate-100"></div>
+
+                <h3 class="mb-5 font-bold text-slate-900">Información del dueño</h3>
+
+                <div class="grid gap-5 md:grid-cols-2">
+                    <label>
+                        <span class="mb-2 block text-sm font-medium text-slate-700">Nombre completo *</span>
+                        <input name="owner" required placeholder="Ej. María González"
+                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                    </label>
+
+                    <label>
+                        <span class="mb-2 block text-sm font-medium text-slate-700">RUT</span>
+                        <input name="rut" placeholder="Ej. 12.345.678-9"
+                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                    </label>
+
+                    <label>
+                        <span class="mb-2 block text-sm font-medium text-slate-700">Teléfono</span>
+                        <input name="phone" placeholder="Ej. +56 9 1234 5678"
+                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                    </label>
+
+                    <label>
+                        <span class="mb-2 block text-sm font-medium text-slate-700">Dirección</span>
+                        <input name="address" placeholder="Ej. Av. Santa Rosa 1234"
+                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                    </label>
+                </div>
+
+                <div class="mt-8 flex justify-end gap-3">
+                    <button type="button" onclick="showModule('mascotas')"
+                            class="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+                        Registrar mascota
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+</main>
+
+
+<!-- ========================= MODAL: CITA ========================= -->
+<div id="appointmentModal" class="modal fixed inset-0 z-50 items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div class="fade-in flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+
+        <div class="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+            <div>
+                <p id="appointmentModalSubtitle" class="text-sm font-medium text-blue-600">Detalle de cita</p>
+                <h2 id="appointmentModalTitle" class="mt-1 text-2xl font-bold text-slate-900">Cita #C-001</h2>
+            </div>
+            <button onclick="closeModal('appointmentModal')" class="rounded-xl p-2 text-2xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">×</button>
+        </div>
+
+        <div class="overflow-y-auto p-6">
+            <div class="grid gap-6 lg:grid-cols-3">
+
+                <div class="space-y-4 lg:col-span-1">
+                    <div class="rounded-2xl bg-navy-950 p-5 text-white">
+                        <p class="text-xs uppercase tracking-wider text-blue-300">Mascota</p>
+                        <h3 id="appointmentPetName" class="mt-2 text-2xl font-bold">Bruno</h3>
+                        <p id="appointmentPetBreed" class="mt-1 text-sm text-slate-400">Labrador Retriever</p>
+                        <div class="mt-5 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
+                            <div>
+                                <p class="text-xs text-slate-500">Chip</p>
+                                <p id="appointmentChip" class="mt-1 text-sm font-medium">981020000123456</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-slate-500">Dueño</p>
+                                <p id="appointmentOwner" class="mt-1 text-sm font-medium">María González</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Cita</p>
+                        <div class="mt-4 space-y-3 text-sm">
+                            <div class="flex justify-between"><span class="text-slate-500">Fecha</span><strong id="appointmentDate">12/08/2026</strong></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Hora</span><strong id="appointmentTime">15:30</strong></div>
+                            <div class="flex justify-between"><span class="text-slate-500">ID consulta</span><strong id="appointmentId">#C-001</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                        <p class="text-xs font-bold uppercase tracking-wider text-amber-700">Último control</p>
+                        <div class="mt-4 grid grid-cols-2 gap-4">
+                            <div><p class="text-xs text-amber-700/70">Peso</p><p id="lastWeight" class="mt-1 font-bold text-amber-900">18.2 kg</p></div>
+                            <div><p class="text-xs text-amber-700/70">Edad</p><p id="lastAge" class="mt-1 font-bold text-amber-900">4 años</p></div>
+                        </div>
+                        <p class="mt-4 text-xs text-amber-700/70">Diagnóstico</p>
+                        <p id="lastDiagnosis" class="mt-1 text-sm text-amber-950">Control general. Estado corporal adecuado.</p>
+                        <p id="lastControlDate" class="mt-3 text-xs text-amber-700/70">Último control: 14/06/2026</p>
+                    </div>
+                </div>
+
+                <!-- Formulario de control -->
+                <div class="lg:col-span-2">
+                    <div id="controlFormContainer">
+                        <div class="mb-5">
+                            <h3 class="text-lg font-bold text-slate-900">Iniciar control</h3>
+                            <p class="text-sm text-slate-500">Completa los datos de la atención actual.</p>
+                        </div>
+
+                        <!-- Datos fijos -->
+                        <div class="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                            <p class="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Datos de la consulta</p>
+                            <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+                                <div><p class="text-xs text-slate-400">ID consulta</p><p id="fixedId" class="mt-1 text-sm font-semibold">#C-001</p></div>
+                                <div><p class="text-xs text-slate-400">Chip</p><p id="fixedChip" class="mt-1 text-sm font-semibold">981020000123456</p></div>
+                                <div><p class="text-xs text-slate-400">Fecha</p><p id="fixedDate" class="mt-1 text-sm font-semibold">12/08/2026</p></div>
+                                <div><p class="text-xs text-slate-400">Hora</p><p id="fixedTime" class="mt-1 text-sm font-semibold">15:30</p></div>
+                            </div>
+                        </div>
+
+                        <form id="controlForm">
+                            <input type="hidden" id="controlAppointmentId">
+
+                            <div class="grid gap-5 md:grid-cols-2">
+                                <label>
+                                    <span class="mb-2 block text-sm font-medium text-slate-700">Peso (kg) *</span>
+                                    <input id="controlWeight" required type="number" step="0.1" min="0"
+                                           class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                                </label>
+
+                                <label>
+                                    <span class="mb-2 block text-sm font-medium text-slate-700">Edad *</span>
+                                    <input id="controlAge" required placeholder="Ej. 4 años, 6 meses"
+                                           class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                                </label>
+                            </div>
+
+                            <label class="mt-5 block">
+                                <span class="mb-2 block text-sm font-medium text-slate-700">Diagnóstico *</span>
+                                <input id="controlDiagnosis" required
+                                       class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                            </label>
+
+                            <label class="mt-5 block">
+                                <span class="mb-2 block text-sm font-medium text-slate-700">Observaciones</span>
+                                <textarea id="controlObservations" rows="7"
+                                          placeholder="Escribe aquí observaciones, indicaciones, medicamentos, evolución, etc."
+                                          class="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"></textarea>
+                            </label>
+
+                            <div class="mt-6 flex justify-end gap-3">
+                                <button type="button" onclick="closeModal('appointmentModal')"
+                                        class="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+                                    Cancelar
+                                </button>
+                                <button type="submit"
+                                        class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+                                    Guardar control
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ========================= MODAL: MASCOTA ========================= -->
+<div id="petModal" class="modal fixed inset-0 z-50 items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div class="fade-in flex max-h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+
+        <div class="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+            <div>
+                <p class="text-sm font-medium text-blue-600">Ficha de mascota</p>
+                <h2 id="petModalName" class="mt-1 text-2xl font-bold text-slate-900">Bruno</h2>
+            </div>
+            <button onclick="closeModal('petModal')" class="rounded-xl p-2 text-2xl text-slate-400 hover:bg-slate-100">×</button>
+        </div>
+
+        <div class="overflow-y-auto p-6">
+            <div class="grid gap-6 lg:grid-cols-3">
+
+                <div>
+                    <div class="rounded-2xl bg-navy-950 p-6 text-white">
+                        <div class="flex items-center gap-4">
+                            <div id="petModalAvatar" class="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500 text-3xl">🐶</div>
+                            <div>
+                                <p id="petModalChip" class="text-xs text-blue-300">Chip 981020000123456</p>
+                                <h3 id="petModalNameCard" class="mt-1 text-xl font-bold">Bruno</h3>
+                                <p id="petModalBreed" class="text-sm text-slate-400">Labrador Retriever</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 grid grid-cols-2 gap-y-5 border-t border-white/10 pt-5">
+                            <div><p class="text-xs text-slate-500">Edad</p><p id="petModalAge" class="mt-1 font-semibold">4 años</p></div>
+                            <div><p class="text-xs text-slate-500">Peso</p><p id="petModalWeight" class="mt-1 font-semibold">18.2 kg</p></div>
+                            <div class="col-span-2"><p class="text-xs text-slate-500">Dueño</p><p id="petModalOwner" class="mt-1 font-semibold">María González</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2">
+                    <div class="mb-4 flex items-end justify-between">
+                        <div>
+                            <h3 class="font-bold text-slate-900">Historial de controles</h3>
+                            <p class="text-sm text-slate-500">Ordenados del más reciente al más antiguo.</p>
+                        </div>
+                        <span id="petControlCount" class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">3 controles</span>
+                    </div>
+
+                    <div id="petHistory" class="space-y-3"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ========================= MODAL: CONTROL ========================= -->
+<div id="controlDetailModal" class="modal fixed inset-0 z-[60] items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+    <div class="fade-in w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div class="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+            <div>
+                <p class="text-sm font-medium text-blue-600">Detalle del control</p>
+                <h2 id="detailControlTitle" class="mt-1 text-xl font-bold text-slate-900">Control #CT-001</h2>
+            </div>
+            <button onclick="closeModal('controlDetailModal')" class="rounded-xl p-2 text-2xl text-slate-400 hover:bg-slate-100">×</button>
+        </div>
+
+        <div class="p-6">
+            <div class="mb-5 grid grid-cols-2 gap-4 md:grid-cols-4">
+                <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-400">Fecha</p><p id="detailDate" class="mt-1 text-sm font-semibold">14/06/2026</p></div>
+                <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-400">Peso</p><p id="detailWeight" class="mt-1 text-sm font-semibold">18.2 kg</p></div>
+                <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-400">Edad</p><p id="detailAge" class="mt-1 text-sm font-semibold">4 años</p></div>
+                <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-400">Veterinario</p><p class="mt-1 text-sm font-semibold">Juanito Perez</p></div>
+            </div>
+
+            <div class="space-y-5">
+                <div>
+                    <p class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">Diagnóstico</p>
+                    <p id="detailDiagnosis" class="rounded-xl border border-slate-200 p-4 text-sm text-slate-700">Control general.</p>
+                </div>
+                <div>
+                    <p class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">Observaciones</p>
+                    <p id="detailObservations" class="min-h-28 rounded-xl border border-slate-200 p-4 text-sm leading-6 text-slate-700">Sin observaciones.</p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeModal('controlDetailModal')"
+                        class="rounded-xl bg-navy-950 px-5 py-3 text-sm font-semibold text-white hover:bg-navy-800">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+/* ============================================================
+   DATOS DE PRUEBA
+   Estos objetos después pueden ser reemplazados por datos
+   enviados desde Django mediante JSON / fetch().
+   ============================================================ */
+
+const pets = [
+    {
+        id: 1,
+        chip: "981020000123456",
+        name: "Bruno",
+        species: "Perro",
+        breed: "Labrador Retriever",
+        age: "4 años",
+        weight: "18.2 kg",
+        owner: "María González",
+        controls: [
+            { id:"CT-014", date:"14/06/2026", weight:"18.2 kg", age:"4 años", diagnosis:"Control general. Estado corporal adecuado.", observations:"Paciente activo. Se recomienda mantener alimentación actual y actividad física regular." },
+            { id:"CT-009", date:"18/02/2026", weight:"17.6 kg", age:"3 años 8 meses", diagnosis:"Leve sobrepeso.", observations:"Se recomienda controlar porciones y aumentar paseos." },
+            { id:"CT-004", date:"10/10/2025", weight:"16.9 kg", age:"3 años 4 meses", diagnosis:"Paciente sano.", observations:"Vacunación y desparasitación al día." }
+        ]
+    },
+    {
+        id: 2,
+        chip: "981020000987321",
+        name: "Luna",
+        species: "Gato",
+        breed: "Doméstico de pelo corto",
+        age: "2 años",
+        weight: "4.3 kg",
+        owner: "Carlos Muñoz",
+        controls: [
+            { id:"CT-013", date:"03/07/2026", weight:"4.3 kg", age:"2 años", diagnosis:"Control preventivo.", observations:"Buen estado general. Se agenda vacunación anual." },
+            { id:"CT-006", date:"05/11/2025", weight:"4.1 kg", age:"1 año 4 meses", diagnosis:"Paciente sano.", observations:"Sin hallazgos relevantes." }
+        ]
+    },
+    {
+        id: 3,
+        chip: "981020000554812",
+        name: "Max",
+        species: "Perro",
+        breed: "Mestizo",
+        age: "7 años",
+        weight: "24.8 kg",
+        owner: "Ana Rojas",
+        controls: [
+            { id:"CT-012", date:"28/07/2026", weight:"24.8 kg", age:"7 años", diagnosis:"Dolor articular leve.", observations:"Se recomienda control de peso y actividad de bajo impacto." },
+            { id:"CT-002", date:"11/08/2025", weight:"25.4 kg", age:"6 años", diagnosis:"Sobrepeso.", observations:"Plan de reducción de peso." }
+        ]
+    },
+    {
+        id: 4,
+        chip: "981020000741225",
+        name: "Mila",
+        species: "Perro",
+        breed: "Poodle",
+        age: "6 años",
+        weight: "6.8 kg",
+        owner: "Pedro Soto",
+        controls: [
+            { id:"CT-011", date:"21/07/2026", weight:"6.8 kg", age:"6 años", diagnosis:"Control preventivo.", observations:"Paciente en buen estado." }
+        ]
+    },
+    {
+        id: 5,
+        chip: "981020000321778",
+        name: "Rocky",
+        species: "Perro",
+        breed: "Pastor Alemán",
+        age: "5 años",
+        weight: "31.5 kg",
+        owner: "Sofía Pérez",
+        controls: [
+            { id:"CT-010", date:"16/07/2026", weight:"31.5 kg", age:"5 años", diagnosis:"Dermatitis leve.", observations:"Se indica tratamiento tópico y nuevo control en 30 días." }
+        ]
+    }
+];
+
+const appointments = [
+    { id:"C-001", petId:1, date:"12/08/2026", time:"15:30", status:"Pendiente" },
+    { id:"C-002", petId:2, date:"12/08/2026", time:"16:00", status:"Pendiente" },
+    { id:"C-003", petId:3, date:"12/08/2026", time:"16:30", status:"Pendiente" },
+    { id:"C-004", petId:4, date:"12/08/2026", time:"17:00", status:"Pendiente" },
+    { id:"C-005", petId:5, date:"12/08/2026", time:"14:30", status:"Atendida" },
+    { id:"C-006", petId:1, date:"12/08/2026", time:"13:30", status:"Atendida" }
+];
+
+
+/* ============================================================
+   NAVEGACIÓN DE MÓDULOS
+   ============================================================ */
+
+document.querySelectorAll(".nav-item").forEach(button => {
+    button.addEventListener("click", () => {
+        showModule(button.dataset.module);
+    });
+});
+
+function showModule(moduleName) {
+    document.querySelectorAll(".module").forEach(module => {
+        module.classList.remove("active");
+    });
+
+    document.getElementById("module-" + moduleName).classList.add("active");
+
+    document.querySelectorAll(".nav-item").forEach(button => {
+        button.classList.toggle("active", button.dataset.module === moduleName);
+    });
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+
+/* ============================================================
+   RENDERIZADO DE AGENDA
+   ============================================================ */
+
+function getPet(id) {
+    return pets.find(pet => pet.id === id);
+}
+
+function renderAppointments() {
+    const agenda = document.getElementById("agendaList");
+    const latest = document.getElementById("latestAppointments");
+
+    agenda.innerHTML = "";
+    latest.innerHTML = "";
+
+    appointments
+        .sort((a,b) => a.time.localeCompare(b.time))
+        .forEach((appointment, index) => {
+            const pet = getPet(appointment.petId);
+            const html = appointmentCardHTML(appointment, pet);
+
+            agenda.insertAdjacentHTML("beforeend", html);
+
+            if (index < 3) {
+                latest.insertAdjacentHTML("beforeend", html);
+            }
+        });
+}
+
+function appointmentCardHTML(appointment, pet) {
+    const attended = appointment.status === "Atendida";
+
+    return `
+        <button onclick="openAppointment('${appointment.id}')"
+                class="appointment-card block w-full rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm">
+            <div class="flex items-center gap-4">
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">${appointment.id}</span>
+                        <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold ${attended ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}">
+                            ${appointment.status}
+                        </span>
+                    </div>
+                    <h4 class="mt-1 truncate text-xl font-bold text-slate-900">${pet.name}</h4>
+                    <p class="mt-1 text-sm text-slate-500">${pet.breed} · ${pet.owner}</p>
+                    <p class="mt-2 text-xs text-slate-400">${appointment.date}</p>
+                </div>
+                <div class="border-l border-slate-100 pl-5 text-right">
+                    <p class="text-2xl font-bold text-navy-950">${appointment.time}</p>
+                    <p class="mt-1 text-xs text-slate-400">Ver cita →</p>
+                </div>
+            </div>
+        </button>
+    `;
+}
+
+
+/* ============================================================
+   MODAL DE CITA / INICIO DE CONTROL
+   ============================================================ */
+
+function openAppointment(appointmentId) {
+    const appointment = appointments.find(a => a.id === appointmentId);
+    if (!appointment) return;
+
+    const pet = getPet(appointment.petId);
+    const last = pet.controls[0];
+
+    document.getElementById("appointmentModalTitle").textContent = `Cita ${appointment.id}`;
+    document.getElementById("appointmentPetName").textContent = pet.name;
+    document.getElementById("appointmentPetBreed").textContent = pet.breed;
+    document.getElementById("appointmentChip").textContent = pet.chip;
+    document.getElementById("appointmentOwner").textContent = pet.owner;
+    document.getElementById("appointmentDate").textContent = appointment.date;
+    document.getElementById("appointmentTime").textContent = appointment.time;
+    document.getElementById("appointmentId").textContent = appointment.id;
+
+    document.getElementById("lastWeight").textContent = last ? last.weight : "Sin registro";
+    document.getElementById("lastAge").textContent = last ? last.age : "Sin registro";
+    document.getElementById("lastDiagnosis").textContent = last ? last.diagnosis : "Sin controles previos";
+    document.getElementById("lastControlDate").textContent = last ? `Último control: ${last.date}` : "No existen controles previos";
+
+    document.getElementById("fixedId").textContent = appointment.id;
+    document.getElementById("fixedChip").textContent = pet.chip;
+    document.getElementById("fixedDate").textContent = appointment.date;
+    document.getElementById("fixedTime").textContent = appointment.time;
+
+    document.getElementById("controlAppointmentId").value = appointment.id;
+    document.getElementById("controlWeight").value = "";
+    document.getElementById("controlAge").value = pet.age;
+    document.getElementById("controlDiagnosis").value = "";
+    document.getElementById("controlObservations").value = "";
+
+    openModal("appointmentModal");
+}
+
+
+/* ============================================================
+   MASCOTAS
+   ============================================================ */
+
+function renderPets() {
+    const search = (document.getElementById("petSearch")?.value || "").toLowerCase().trim();
+    const list = document.getElementById("petsList");
+
+    const filtered = pets.filter(pet =>
+        pet.name.toLowerCase().includes(search) ||
+        pet.chip.toLowerCase().includes(search) ||
+        pet.breed.toLowerCase().includes(search) ||
+        pet.owner.toLowerCase().includes(search)
+    );
+
+    document.getElementById("petCount").textContent = `${filtered.length} mascota${filtered.length !== 1 ? "s" : ""} encontrada${filtered.length !== 1 ? "s" : ""}`;
+    list.innerHTML = "";
+
+    if (!filtered.length) {
+        list.innerHTML = `
+            <div class="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
+                <div class="text-4xl">🐾</div>
+                <h3 class="mt-3 font-bold text-slate-900">No encontramos esa mascota</h3>
+                <p class="mt-1 text-sm text-slate-500">Puedes revisar el chip o inscribir una nueva mascota.</p>
+                <button onclick="showModule('inscribir')" class="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">Inscribir mascota</button>
+            </div>
+        `;
+        return;
+    }
+
+    filtered.forEach(pet => {
+        list.insertAdjacentHTML("beforeend", `
+            <button onclick="openPet(${pet.id})"
+                    class="pet-card w-full rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm">
+                <div class="flex items-center gap-5">
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xl">
+                        ${pet.species === "Gato" ? "🐱" : "🐶"}
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Chip ${pet.chip}</p>
+                        <h3 class="mt-1 truncate text-xl font-bold text-slate-900">${pet.name}</h3>
+                        <p class="mt-1 text-sm text-slate-500">Dueño: ${pet.owner}</p>
+                    </div>
+
+                    <div class="hidden border-l border-slate-100 pl-6 text-right sm:block">
+                        <p class="text-sm font-semibold text-slate-700">${pet.breed}</p>
+                        <p class="mt-1 text-sm text-slate-500">${pet.age}</p>
+                        <p class="mt-1 text-sm font-bold text-navy-950">${pet.weight}</p>
+                    </div>
+
+                    <span class="text-xl text-slate-300">›</span>
+                </div>
+            </button>
+        `);
+    });
+}
+
+
+/* ============================================================
+   MODAL DE FICHA DE MASCOTA
+   ============================================================ */
+
+function openPet(petId) {
+    const pet = getPet(petId);
+    if (!pet) return;
+
+    document.getElementById("petModalName").textContent = pet.name;
+    document.getElementById("petModalNameCard").textContent = pet.name;
+    document.getElementById("petModalChip").textContent = `Chip ${pet.chip}`;
+    document.getElementById("petModalBreed").textContent = pet.breed;
+    document.getElementById("petModalAge").textContent = pet.age;
+    document.getElementById("petModalWeight").textContent = pet.weight;
+    document.getElementById("petModalOwner").textContent = pet.owner;
+    document.getElementById("petModalAvatar").textContent = pet.species === "Gato" ? "🐱" : "🐶";
+
+    document.getElementById("petControlCount").textContent =
+        `${pet.controls.length} control${pet.controls.length !== 1 ? "es" : ""}`;
+
+    const history = document.getElementById("petHistory");
+    history.innerHTML = "";
+
+    pet.controls.forEach(control => {
+        history.insertAdjacentHTML("beforeend", `
+            <button onclick="openControlDetail(${pet.id}, '${control.id}')"
+                    class="w-full rounded-2xl border border-slate-200 p-4 text-left transition hover:border-blue-200 hover:bg-blue-50/30">
+                <div class="flex items-center gap-4">
+                    <div class="rounded-xl bg-blue-50 px-3 py-2 text-center">
+                        <p class="text-[10px] font-bold uppercase text-blue-500">Control</p>
+                        <p class="mt-0.5 text-sm font-bold text-blue-700">${control.id}</p>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="font-semibold text-slate-900">${control.date}</p>
+                        <p class="mt-1 truncate text-sm text-slate-500">${control.diagnosis}</p>
+                    </div>
+                    <div class="hidden text-right sm:block">
+                        <p class="text-sm font-semibold text-slate-700">${control.weight}</p>
+                        <p class="text-xs text-slate-400">${control.age}</p>
+                    </div>
+                    <span class="text-xl text-slate-300">›</span>
+                </div>
+            </button>
+        `);
+    });
+
+    openModal("petModal");
+}
+
+
+/* ============================================================
+   DETALLE DE CONTROL
+   ============================================================ */
+
+function openControlDetail(petId, controlId) {
+    const pet = getPet(petId);
+    const control = pet.controls.find(c => c.id === controlId);
+    if (!control) return;
+
+    document.getElementById("detailControlTitle").textContent = `Control #${control.id} · ${pet.name}`;
+    document.getElementById("detailDate").textContent = control.date;
+    document.getElementById("detailWeight").textContent = control.weight;
+    document.getElementById("detailAge").textContent = control.age;
+    document.getElementById("detailDiagnosis").textContent = control.diagnosis;
+    document.getElementById("detailObservations").textContent = control.observations;
+
+    openModal("controlDetailModal");
+}
+
+
+/* ============================================================
+   LISTADO DE CONTROLES
+   ============================================================ */
+
+function renderControls(search = "") {
+    const list = document.getElementById("controlsList");
+    const query = search.toLowerCase().trim();
+
+    const allControls = [];
+
+    pets.forEach(pet => {
+        pet.controls.forEach(control => {
+            allControls.push({ ...control, pet });
+        });
+    });
+
+    const filtered = allControls.filter(item =>
+        item.pet.name.toLowerCase().includes(query) ||
+        item.pet.chip.toLowerCase().includes(query) ||
+        item.diagnosis.toLowerCase().includes(query) ||
+        item.id.toLowerCase().includes(query)
+    );
+
+    list.innerHTML = "";
+
+    filtered.sort((a,b) => {
+        const [da,ma,ya] = a.date.split("/");
+        const [db,mb,yb] = b.date.split("/");
+        return new Date(`${yb}-${mb}-${db}`) - new Date(`${ya}-${ma}-${da}`);
+    });
+
+    filtered.forEach(item => {
+        list.insertAdjacentHTML("beforeend", `
+            <button onclick="openControlDetail(${item.pet.id}, '${item.id}')"
+                    class="w-full rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-blue-200 hover:shadow-md">
+                <div class="flex items-center gap-5">
+                    <div class="hidden h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-xl sm:flex">
+                        ${item.pet.species === "Gato" ? "🐱" : "🐶"}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">${item.id} · ${item.date}</p>
+                        <h3 class="mt-1 text-lg font-bold text-slate-900">${item.pet.name}</h3>
+                        <p class="mt-1 text-sm text-slate-500">${item.diagnosis}</p>
+                    </div>
+                    <div class="hidden text-right sm:block">
+                        <p class="text-sm font-bold text-slate-800">${item.weight}</p>
+                        <p class="mt-1 text-xs text-slate-400">${item.age}</p>
+                    </div>
+                    <span class="text-xl text-slate-300">›</span>
+                </div>
+            </button>
+        `);
+    });
+}
+
+
+/* ============================================================
+   BUSCADOR GLOBAL
+   ============================================================ */
+
+document.getElementById("globalSearch").addEventListener("keydown", function(event) {
+    if (event.key !== "Enter") return;
+
+    const query = this.value.toLowerCase().trim();
+    if (!query) return;
+
+    const pet = pets.find(p =>
+        p.name.toLowerCase().includes(query) ||
+        p.chip.toLowerCase().includes(query) ||
+        p.owner.toLowerCase().includes(query)
+    );
+
+    if (pet) {
+        openPet(pet.id);
+        return;
+    }
+
+    const appointment = appointments.find(a => a.id.toLowerCase() === query);
+    if (appointment) {
+        openAppointment(appointment.id);
+        return;
+    }
+
+    showModule("mascotas");
+    document.getElementById("petSearch").value = query;
+    renderPets();
+});
+
+
+/* ============================================================
+   ENVÍO DEL FORMULARIO DE CONTROL
+   ============================================================ */
+
+document.getElementById("controlForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const appointmentId = document.getElementById("controlAppointmentId").value;
+    const appointment = appointments.find(a => a.id === appointmentId);
+    const pet = appointment ? getPet(appointment.petId) : null;
+
+    const payload = {
+        consulta_id: appointmentId,
+        chip: pet?.chip,
+        peso: document.getElementById("controlWeight").value,
+        edad: document.getElementById("controlAge").value,
+        diagnostico: document.getElementById("controlDiagnosis").value,
+        observaciones: document.getElementById("controlObservations").value
+    };
+
+    console.log("DATOS QUE SE ENVIARÍAN A DJANGO:", payload);
+
+    /*
+       CUANDO LO CONECTES CON DJANGO:
+
+       fetch("/api/controles/crear/", {
+           method: "POST",
+           headers: {
+               "Content-Type": "application/json",
+               "X-CSRFToken": getCookie("csrftoken")
+           },
+           body: JSON.stringify(payload)
+       })
+       .then(response => response.json())
+       .then(data => {
+           ...
+       });
+    */
+
+    alert("Control guardado correctamente (modo demostración).");
+    closeModal("appointmentModal");
+});
+
+
+/* ============================================================
+   REGISTRO DE MASCOTA
+   ============================================================ */
+
+document.getElementById("registerPetForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const formData = new FormData(this);
+    const payload = Object.fromEntries(formData.entries());
+
+    console.log("DATOS QUE SE ENVIARÍAN A DJANGO:", payload);
+
+    /*
+       Ejemplo futuro:
+
+       fetch("/api/mascotas/crear/", {
+           method: "POST",
+           headers: {
+               "Content-Type": "application/json",
+               "X-CSRFToken": getCookie("csrftoken")
+           },
+           body: JSON.stringify(payload)
+       });
+    */
+
+    alert("Mascota registrada correctamente (modo demostración).");
+    this.reset();
+    showModule("mascotas");
+});
+
+
+/* ============================================================
+   MODALES
+   ============================================================ */
+
+function openModal(id) {
+    document.getElementById(id).classList.add("open");
+    document.body.classList.add("overflow-hidden");
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove("open");
+
+    if (!document.querySelector(".modal.open")) {
+        document.body.classList.remove("overflow-hidden");
+    }
+}
+
+document.querySelectorAll(".modal").forEach(modal => {
+    modal.addEventListener("click", event => {
+        if (event.target === modal) {
+            closeModal(modal.id);
+        }
+    });
+});
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+        document.querySelectorAll(".modal.open").forEach(modal => closeModal(modal.id));
+    }
+});
+
+
+/* ============================================================
+   INICIALIZACIÓN
+   ============================================================ */
+
+renderAppointments();
+renderPets();
+renderControls();
+
+</script>
+
+</body>
+</html>
