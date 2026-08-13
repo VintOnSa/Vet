@@ -55,6 +55,14 @@
             box-shadow: 0 8px 24px rgba(15, 23, 42, .07);
         }
         .sidebar-scroll { overflow-y: auto; }
+        .calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:.5rem; }
+        .calendar-day { display:flex; align-items:center; justify-content:center; height:2.5rem; width:2.5rem; margin:auto; border-radius:9999px; font-size:.875rem; transition:.15s; }
+        .calendar-day:not(.empty) { background:#eff6ff; color:#1d4ed8; }
+        .calendar-day:not(.empty):hover { background:#dbeafe; }
+        .calendar-day.selected { background:#2563eb !important; color:white !important; box-shadow:0 4px 10px rgba(37,99,235,.25); }
+        .calendar-day.today { outline:2px solid #93c5fd; outline-offset:2px; }
+        .profile-menu { display:none; }
+        .profile-menu.open { display:block; animation:fadeIn .15s ease-out; }
         @media (max-width: 900px) {
             #sidebar { width: 76px; }
             #sidebar .brand-text, #sidebar .nav-label, #sidebar .user-text { display: none; }
@@ -64,6 +72,8 @@
 </head>
 
 <body class="bg-slate-100 text-slate-800">
+
+<div id="toast-container" class="fixed bottom-4 right-4 space-y-3 z-[99999] mr-2"></div>
 
 <!-- ========================= SIDEBAR ========================= -->
 <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 flex w-72 flex-col bg-navy-950 text-slate-300 shadow-2xl transition-all">
@@ -99,6 +109,11 @@
                     data-module="controles">
                 <span class="text-lg">▣</span><span class="nav-label">Controles</span>
             </button>
+
+            <button class="nav-item flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium hover:bg-white/10"
+                    data-module="agendar">
+                <span class="text-lg">📅</span><span class="nav-label">Agendar control</span>
+            </button>
         </nav>
 
         <p class="nav-label mb-2 mt-8 px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">Gestión</p>
@@ -108,18 +123,26 @@
                     data-module="inscribir">
                 <span class="text-lg">＋</span><span class="nav-label">Inscribir mascota</span>
             </button>
+
+            <button class="nav-item flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium hover:bg-white/10"
+                    data-module="profesionales">
+                <span class="text-lg">♙</span><span class="nav-label">Profesionales</span>
+            </button>
         </nav>
     </div>
 
-    <div class="border-t border-white/10 p-4">
-        <div class="flex items-center gap-3 rounded-xl bg-white/5 p-3">
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500 font-bold text-white">
-                JP
+    <div class="relative border-t border-white/10 p-4">
+        <button onclick="toggleProfileMenu(event)" class="flex w-full items-center gap-3 rounded-xl bg-white/5 p-3 text-left hover:bg-white/10">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500 font-bold text-white">JP</div>
+            <div class="user-text min-w-0 flex-1">
+                <p class="truncate text-sm font-semibold text-white">{{User.name}}</p>
+                <p class="text-xs text-slate-400">{{User.type}}</p>
             </div>
-            <div class="user-text min-w-0">
-                <p class="truncate text-sm font-semibold text-white">Juanito Perez</p>
-                <p class="text-xs text-slate-400">Veterinario</p>
-            </div>
+            <span class="user-text text-slate-500">⋮</span>
+        </button>
+        <div id="profileMenu" class="profile-menu absolute bottom-20 left-4 right-4 z-50 overflow-hidden rounded-xl border border-white/10 bg-navy-800 shadow-2xl">
+            <button onclick="openEditProfile()" class="flex w-full items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/10">✎ <span>Editar mis datos</span></button>
+            <button onclick="logoutDemo()" class="flex w-full items-center gap-3 border-t border-white/10 px-4 py-3 text-sm text-red-300 hover:bg-red-500/10">↪ <span>Salir</span></button>
         </div>
     </div>
 </aside>
@@ -133,7 +156,7 @@
 
             <header class="mb-7">
                 <p class="text-sm font-medium text-blue-600">Miércoles, 12 de agosto de 2026</p>
-                <h2 class="mt-1 text-3xl font-bold tracking-tight text-slate-900">Hola, Juanito 👋</h2>
+                <h2 class="mt-1 text-3xl font-bold tracking-tight text-slate-900">Hola, {{ User.name }} 👋</h2>
                 <p class="mt-1 text-slate-500">Aquí tienes un resumen de la jornada y las próximas atenciones.</p>
             </header>
 
@@ -198,6 +221,12 @@
                             <p class="mt-1 text-xs text-slate-500">Registrar una nueva mascota en el sistema.</p>
                         </button>
 
+                        <button onclick="showModule('agendar')" class="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
+                            <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-xl text-blue-600">📅</div>
+                            <p class="font-semibold text-slate-900">Agendar control</p>
+                            <p class="mt-1 text-xs text-slate-500">Crear una nueva cita y asignar veterinario.</p>
+                        </button>
+
                         <button onclick="showModule('mascotas')"
                                 class="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
                             <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-xl">🐾</div>
@@ -233,7 +262,7 @@
                 <div>
                     <p class="text-sm font-medium text-blue-600">Registro municipal</p>
                     <h2 class="mt-1 text-3xl font-bold text-slate-900">Mascotas</h2>
-                    <p class="mt-1 text-slate-500">Busca y consulta las fichas de animales inscritos.</p>
+                    <p class="mt-1 text-slate-500">Busca y consulta las fichas de pacientes inscritos.</p>
                 </div>
                 <button onclick="showModule('inscribir')"
                         class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
@@ -263,6 +292,66 @@
         </div>
     </section>
 
+    <!-- ========================= AGENDAR CONTROL ========================= -->
+    <section id="module-agendar" class="module fade-in p-5 md:p-8">
+        <div class="mx-auto max-w-5xl">
+            <div class="mb-7"><p class="text-sm font-medium text-blue-600">Agenda</p>
+                <h2 class="mt-1 text-3xl font-bold text-slate-900">Agendar control</h2><p class="mt-1 text-slate-500">Selecciona mascota, fecha, hora y veterinario.</p>
+            </div>
+            <form id="appointmentForm" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+                <div class="grid gap-6 lg:grid-cols-2">
+                    <div><label class="mb-2 block text-sm font-medium text-slate-700">Buscar mascota *</label><div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">⌕</span><input id="appointmentPetSearch" autocomplete="off" placeholder="Nombre, chip o dueño..." class="w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"></div><div id="appointmentPetResults" class="mt-2 max-h-48 overflow-y-auto rounded-xl border border-slate-100 bg-white shadow-sm"></div><input type="hidden" id="appointmentPetId" required><p id="selectedAppointmentPet" class="mt-2 hidden rounded-lg bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700"></p></div>
+                    <label><span class="mb-2 block text-sm font-medium text-slate-700">Veterinario *</span><select id="appointmentVet" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"><option value="">Seleccionar veterinario...</option></select></label>
+                </div>
+                <div class="my-7 border-t border-slate-100"></div>
+                <div class="grid gap-6 lg:grid-cols-2">
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-slate-700">Fecha *</label>
+                        <input type="hidden" id="appointmentDate" required>
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div id="appointmentCalendar" class="calendar-grid"></div>
+                        </div>
+                        <p id="selectedDateLabel" class="mt-2 text-sm text-slate-500">Selecciona una fecha.</p>
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-medium text-slate-700">Hora *</label>
+                        <select id="appointmentHour" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+                            <option disabled selected value="null">Seleccionar hora...</option>
+                            {% for h in Horas %}
+                                <option value="{{ forloop.counter0 }}">{{ h }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="mt-5 rounded-2xl bg-slate-50 p-5">
+                            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Resumen</p>
+                            <div class="mt-4 space-y-3 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500">Mascota</span>
+                                    <strong id="summaryPet">—</strong>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-500">Fecha</span>
+                                    <strong id="summaryDate">—</strong>
+                                </div>
+                                <div class="flex justify-between">
+                            <span class="text-slate-500">Hora</span>
+                            <strong id="summaryHour">—</strong>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-500">Veterinario</span>
+                            <strong id="summaryVet">—</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                </div>
+                <div class="mt-8 flex justify-end gap-3">
+                    <button type="button" onclick="showModule('inicio')" class="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancelar</button>
+                    <button type="submit" class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">Crear control</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
     <!-- ========================= CONTROLES ========================= -->
     <section id="module-controles" class="module fade-in p-5 md:p-8">
         <div class="mx-auto max-w-7xl">
@@ -286,109 +375,25 @@
     </section>
 
     <!-- ========================= INSCRIBIR ========================= -->
-    <section id="module-inscribir" class="module fade-in p-5 md:p-8">
-        <div class="mx-auto max-w-4xl">
-            <div class="mb-7">
-                <p class="text-sm font-medium text-blue-600">Registro municipal</p>
-                <h2 class="mt-1 text-3xl font-bold text-slate-900">Inscribir mascota</h2>
-                <p class="mt-1 text-slate-500">Ingresa los datos básicos para crear una nueva ficha.</p>
+    <section id="module-inscribir" class="module fade-in p-5 md:p-8"><div class="mx-auto max-w-5xl"><div class="mb-7"><p class="text-sm font-medium text-blue-600">Registro municipal</p><h2 class="mt-1 text-3xl font-bold text-slate-900">Inscribir mascota</h2><p class="mt-1 text-slate-500">Busca al dueño y vincula la nueva mascota a su ficha.</p></div><form id="registerPetForm" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8"><div class="mb-6 border-b border-slate-100 pb-5"><h3 class="font-bold text-slate-900">1. Buscar dueño</h3><p class="mt-1 text-sm text-slate-500">Los resultados pueden venir de <code>/gOwner/</code>.</p></div><div class="relative"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">⌕</span><input id="ownerSearch" autocomplete="off" placeholder="Nombre, RUT, teléfono o dirección..." class="w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"></div><div id="ownerResults" class="mt-2 max-h-56 overflow-y-auto rounded-xl border border-slate-100 bg-white"></div><input type="hidden" id="selectedOwnerRut"><div id="selectedOwner" class="mt-3 hidden rounded-xl border border-blue-100 bg-blue-50 p-4"></div><div class="mt-4 flex flex-wrap gap-2"><button type="button" onclick="openNewOwnerModal()" class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">＋ Añadir dueño nuevo</button><button type="button" onclick="clearOwnerSelection()" class="rounded-xl px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50">Limpiar selección</button></div><div class="my-8 border-t border-slate-100"></div><h3 class="font-bold text-slate-900">2. Datos de la mascota</h3><p class="mt-1 text-sm text-slate-500">Estos datos quedarán asociados al dueño seleccionado.</p><div class="mt-5 grid gap-5 md:grid-cols-2"><label><span class="mb-2 block text-sm font-medium">N° de chip *</span><input id="petRegisterChip" required class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"></label><label><span class="mb-2 block text-sm font-medium">Nombre *</span><input id="petRegisterName" required class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"></label><label><span class="mb-2 block text-sm font-medium">Raza</span><input id="petRegisterBreed" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"></label><label><span class="mb-2 block text-sm font-medium">Especie *</span><select id="petRegisterSpecies" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm"><option value="">Seleccionar...</option><option>Perro</option><option>Gato</option><option>Otro</option></select></label><label><span class="mb-2 block text-sm font-medium">Edad *</span><input id="petRegisterAge" required placeholder="Ej. 4 años" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"></label><label><span class="mb-2 block text-sm font-medium">Peso (kg) *</span><input id="petRegisterWeight" required type="number" step="0.1" min="0" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"></label></div><div class="mt-8 flex justify-end gap-3"><button type="button" onclick="showModule('mascotas')" class="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600">Cancelar</button><button type="submit" class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white">Registrar mascota</button></div></form></div></section>
+
+    <!-- ========================= PROFESIONALES ========================= -->
+    <section id="module-profesionales" class="module fade-in p-5 md:p-8">
+        <div class="mx-auto max-w-5xl">
+            <div class="mb-7 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+                <div>
+                    <p class="text-sm font-medium text-blue-600">Equipo veterinario</p>
+                    <h2 class="mt-1 text-3xl font-bold text-slate-900">Profesionales</h2>
+                    <p class="mt-1 text-slate-500">Gestiona los veterinarios disponibles para las atenciones.</p>
+                </div>
+                <button onclick="openNewVetModal()" class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">＋ Añadir profesional</button>
             </div>
-
-            <form id="registerPetForm" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-                <div class="mb-6 border-b border-slate-100 pb-5">
-                    <h3 class="font-bold text-slate-900">Información de la mascota</h3>
-                    <p class="mt-1 text-sm text-slate-500">Los campos marcados con * son obligatorios.</p>
-                </div>
-
-                <div class="grid gap-5 md:grid-cols-2">
-                    <label>
-                        <span class="mb-2 block text-sm font-medium text-slate-700">N° de chip *</span>
-                        <input name="chip" required placeholder="Ej. 981020000123456"
-                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-                    </label>
-
-                    <label>
-                        <span class="mb-2 block text-sm font-medium text-slate-700">Nombre *</span>
-                        <input name="name" required placeholder="Ej. Bruno"
-                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-                    </label>
-
-                    <label>
-                        <span class="mb-2 block text-sm font-medium text-slate-700">Raza</span>
-                        <input name="breed" placeholder="Ej. Labrador Retriever"
-                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-                    </label>
-
-                    <label>
-                        <span class="mb-2 block text-sm font-medium text-slate-700">Edad *</span>
-                        <input name="age" required type="number" min="0" step="0.1" placeholder="Ej. 4"
-                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-                    </label>
-
-                    <label>
-                        <span class="mb-2 block text-sm font-medium text-slate-700">Peso (kg) *</span>
-                        <input name="weight" required type="number" min="0" step="0.1" placeholder="Ej. 18.5"
-                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-                    </label>
-
-                    <label>
-                        <span class="mb-2 block text-sm font-medium text-slate-700">Especie *</span>
-                        <select name="species" required
-                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-                            <option value="">Seleccionar...</option>
-                            <option>Perro</option>
-                            <option>Gato</option>
-                            <option>Otro</option>
-                        </select>
-                    </label>
-                </div>
-
-                <div class="my-7 border-t border-slate-100"></div>
-
-                <h3 class="mb-5 font-bold text-slate-900">Información del dueño</h3>
-
-                <div class="grid gap-5 md:grid-cols-2">
-                    <label>
-                        <span class="mb-2 block text-sm font-medium text-slate-700">Nombre completo *</span>
-                        <input name="owner" required placeholder="Ej. María González"
-                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-                    </label>
-
-                    <label>
-                        <span class="mb-2 block text-sm font-medium text-slate-700">RUT</span>
-                        <input name="rut" placeholder="Ej. 12.345.678-9"
-                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-                    </label>
-
-                    <label>
-                        <span class="mb-2 block text-sm font-medium text-slate-700">Teléfono</span>
-                        <input name="phone" placeholder="Ej. +56 9 1234 5678"
-                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-                    </label>
-
-                    <label>
-                        <span class="mb-2 block text-sm font-medium text-slate-700">Dirección</span>
-                        <input name="address" placeholder="Ej. Av. Santa Rosa 1234"
-                               class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-                    </label>
-                </div>
-
-                <div class="mt-8 flex justify-end gap-3">
-                    <button type="button" onclick="showModule('mascotas')"
-                            class="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50">
-                        Cancelar
-                    </button>
-                    <button type="submit"
-                            class="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-                        Registrar mascota
-                    </button>
-                </div>
-            </form>
+            <div class="mb-5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                <div class="flex items-center gap-3"><span class="text-xl text-slate-400">⌕</span><input id="vetSearch" oninput="renderVets(this.value)" placeholder="Buscar por nombre, RUT o teléfono..." class="w-full bg-transparent text-sm outline-none"></div>
+            </div>
+            <div id="vetsList" class="grid gap-3 md:grid-cols-2"></div>
         </div>
     </section>
-
-</main>
-
 
 <!-- ========================= MODAL: CITA ========================= -->
 <div id="appointmentModal" class="modal fixed inset-0 z-50 items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
@@ -605,6 +610,42 @@
 </div>
 
 
+<div id="profileModal" class="modal fixed inset-0 z-[70] items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div class="fade-in w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div class="flex items-center justify-between border-b border-slate-100 px-6 py-5"><div>
+                <p class="text-sm font-medium text-blue-600">Mi cuenta</p>
+                <h2 class="mt-1 text-xl font-bold">Editar mis datos</h2>
+            </div>
+            <button onclick="closeModal('profileModal')" class="p-2 text-2xl text-slate-400">×</button>
+        </div>
+        <form id="profileForm" class="space-y-5 p-6">
+            <label class="block"><span class="mb-2 block text-sm font-medium">Nombre</span>
+                <input id="ProfileName" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm">
+            </label>
+            <label class="block">
+                <span class="mb-2 block text-sm font-medium">RUT</span>
+                <input id="ProfileRut" placeholder="12.345.678-9" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm">
+            </label>
+            <label class="block">
+                <span class="mb-2 block text-sm font-medium">Teléfono</span>
+                <input id="ProfilePhone" placeholder="+56 9..." class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm">
+            </label>
+            <label class="block">
+                <span class="mb-2 block text-sm font-medium">Correo</span>
+                <input id="ProfileMail" type="email" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm">
+            </label>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeModal('profileModal')" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold">Cancelar</button>
+                <button class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white">Guardar cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="ownerModal" class="modal fixed inset-0 z-[70] items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"><div class="fade-in w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl"><div class="flex items-center justify-between border-b border-slate-100 px-6 py-5"><div><p class="text-sm font-medium text-blue-600">Registro</p><h2 class="mt-1 text-xl font-bold">Añadir dueño</h2></div><button onclick="closeModal('ownerModal')" class="p-2 text-2xl text-slate-400">×</button></div><form id="ownerForm" class="grid gap-5 p-6 md:grid-cols-2"><label class="md:col-span-2"><span class="mb-2 block text-sm font-medium">Nombre completo *</span><input name="nombre" required class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"></label><label><span class="mb-2 block text-sm font-medium">RUT *</span><input name="rut" required class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"></label><label><span class="mb-2 block text-sm font-medium">Teléfono</span><input name="telefono" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"></label><label class="md:col-span-2"><span class="mb-2 block text-sm font-medium">Dirección</span><input name="direccion" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"></label><div class="flex justify-end gap-3 md:col-span-2"><button type="button" onclick="closeModal('ownerModal')" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold">Cancelar</button><button class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white">Guardar dueño</button></div></form></div></div>
+
+<div id="vetModal" class="modal fixed inset-0 z-[70] items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"><div class="fade-in w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl"><div class="flex items-center justify-between border-b border-slate-100 px-6 py-5"><div><p class="text-sm font-medium text-blue-600">Equipo</p><h2 class="mt-1 text-xl font-bold">Añadir profesional</h2></div><button onclick="closeModal('vetModal')" class="p-2 text-2xl text-slate-400">×</button></div><form id="vetForm" class="grid gap-5 p-6 md:grid-cols-2"><label class="md:col-span-2"><span class="mb-2 block text-sm font-medium">Nombre completo *</span><input name="nombre" required class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"></label><label><span class="mb-2 block text-sm font-medium">RUT</span><input name="rut" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"></label><label><span class="mb-2 block text-sm font-medium">Teléfono</span><input name="telefono" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"></label><label class="md:col-span-2"><span class="mb-2 block text-sm font-medium">Dirección</span><input name="direccion" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm"></label><div class="flex justify-end gap-3 md:col-span-2"><button type="button" onclick="closeModal('vetModal')" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold">Cancelar</button><button class="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white">Guardar profesional</button></div></form></div></div>
+
 <script>
 /* ============================================================
    DATOS DE PRUEBA
@@ -612,86 +653,15 @@
    enviados desde Django mediante JSON / fetch().
    ============================================================ */
 
-const pets = [
-    {
-        id: 1,
-        chip: "981020000123456",
-        name: "Bruno",
-        species: "Perro",
-        breed: "Labrador Retriever",
-        age: "4 años",
-        weight: "18.2 kg",
-        owner: "María González",
-        controls: [
-            { id:"CT-014", date:"14/06/2026", weight:"18.2 kg", age:"4 años", diagnosis:"Control general. Estado corporal adecuado.", observations:"Paciente activo. Se recomienda mantener alimentación actual y actividad física regular." },
-            { id:"CT-009", date:"18/02/2026", weight:"17.6 kg", age:"3 años 8 meses", diagnosis:"Leve sobrepeso.", observations:"Se recomienda controlar porciones y aumentar paseos." },
-            { id:"CT-004", date:"10/10/2025", weight:"16.9 kg", age:"3 años 4 meses", diagnosis:"Paciente sano.", observations:"Vacunación y desparasitación al día." }
-        ]
-    },
-    {
-        id: 2,
-        chip: "981020000987321",
-        name: "Luna",
-        species: "Gato",
-        breed: "Doméstico de pelo corto",
-        age: "2 años",
-        weight: "4.3 kg",
-        owner: "Carlos Muñoz",
-        controls: [
-            { id:"CT-013", date:"03/07/2026", weight:"4.3 kg", age:"2 años", diagnosis:"Control preventivo.", observations:"Buen estado general. Se agenda vacunación anual." },
-            { id:"CT-006", date:"05/11/2025", weight:"4.1 kg", age:"1 año 4 meses", diagnosis:"Paciente sano.", observations:"Sin hallazgos relevantes." }
-        ]
-    },
-    {
-        id: 3,
-        chip: "981020000554812",
-        name: "Max",
-        species: "Perro",
-        breed: "Mestizo",
-        age: "7 años",
-        weight: "24.8 kg",
-        owner: "Ana Rojas",
-        controls: [
-            { id:"CT-012", date:"28/07/2026", weight:"24.8 kg", age:"7 años", diagnosis:"Dolor articular leve.", observations:"Se recomienda control de peso y actividad de bajo impacto." },
-            { id:"CT-002", date:"11/08/2025", weight:"25.4 kg", age:"6 años", diagnosis:"Sobrepeso.", observations:"Plan de reducción de peso." }
-        ]
-    },
-    {
-        id: 4,
-        chip: "981020000741225",
-        name: "Mila",
-        species: "Perro",
-        breed: "Poodle",
-        age: "6 años",
-        weight: "6.8 kg",
-        owner: "Pedro Soto",
-        controls: [
-            { id:"CT-011", date:"21/07/2026", weight:"6.8 kg", age:"6 años", diagnosis:"Control preventivo.", observations:"Paciente en buen estado." }
-        ]
-    },
-    {
-        id: 5,
-        chip: "981020000321778",
-        name: "Rocky",
-        species: "Perro",
-        breed: "Pastor Alemán",
-        age: "5 años",
-        weight: "31.5 kg",
-        owner: "Sofía Pérez",
-        controls: [
-            { id:"CT-010", date:"16/07/2026", weight:"31.5 kg", age:"5 años", diagnosis:"Dermatitis leve.", observations:"Se indica tratamiento tópico y nuevo control en 30 días." }
-        ]
-    }
-];
+let pets = [];
+let appointments = [];
+let owners = [];
+let veterinarians = [];
+let horas = window.horasData;
+let perfilData = window.userData = {{ User|safe }};
+console.log(perfilData);
 
-const appointments = [
-    { id:"C-001", petId:1, date:"12/08/2026", time:"15:30", status:"Pendiente" },
-    { id:"C-002", petId:2, date:"12/08/2026", time:"16:00", status:"Pendiente" },
-    { id:"C-003", petId:3, date:"12/08/2026", time:"16:30", status:"Pendiente" },
-    { id:"C-004", petId:4, date:"12/08/2026", time:"17:00", status:"Pendiente" },
-    { id:"C-005", petId:5, date:"12/08/2026", time:"14:30", status:"Atendida" },
-    { id:"C-006", petId:1, date:"12/08/2026", time:"13:30", status:"Atendida" }
-];
+
 
 
 /* ============================================================
@@ -1141,13 +1111,1138 @@ document.addEventListener("keydown", event => {
 });
 
 
+
+/* ============================================================
+   DATOS DESDE DJANGO + NUEVOS FORMULARIOS
+   ============================================================ */
+function valueOf(obj,...keys){
+    for(const k of keys){
+        if(obj&&obj[k]!==undefined&&obj[k]!==null)return obj[k];
+    }
+    return ''
+}
+
+function petId(p){
+    return valueOf(p,'id','pk','id_mascota')
+}
+
+function petName(p){
+    return valueOf(p,'name','nombre','nombre_mascota')||'Mascota sin nombre'
+}
+
+function petChip(p){
+    return valueOf(p,'chip','nchip','numero_chip','n_chip')
+}
+
+function petBreed(p){
+    return valueOf(p,'breed','raza')||'Raza no registrada'
+}
+
+function petOwner(p){
+    return valueOf(p,'owner','dueno','dueno_nombre','nombre_dueno')||'Dueño no registrado'
+}
+
+function petAge(p){
+    return valueOf(p,'age','edad')||'—'
+}
+
+function petWeight(p){
+    return valueOf(p,'weight','peso')||'—'
+}
+
+function vetName(v){
+    return valueOf(v,'nombre','name')||'Veterinario'
+}
+
+function getPet(id){
+    return pets.find(p=>String(petId(p))===String(id))
+}
+
+function getAppointmentPet(a){
+    const id = valueOf(a,'petId','mascota_id','id_mascota');
+    if(id)return getPet(id);
+    if(a.mascota&&typeof a.mascota==='object')return a.mascota;
+    return pets.find(p=>String(petChip(p))===String(valueOf(a,'chip','nchip')))
+}
+
+async function cargarDatos() {
+    try {
+        const [p,a,o,v] = await Promise.all([
+            fetch('/gPets/').then(r => r.ok ? r.json() : {}),
+            fetch('/gAppointments/').then(r => r.ok ? r.json() : {}),
+            fetch('/gOwner/').then(r => r.ok ? r.json() : {}),
+            fetch('/gVets/').then(r => r.ok ? r.json() : {}),
+        ]);
+
+        pets = p.mascotas || [];
+        appointments = a.controles || a.appointments || [];
+        owners = o.duenos || [];
+        veterinarians = v.veterinarios || [];
+
+    } catch (e) {
+        console.error('Error cargando datos:', e);
+    }
+
+    renderAppointments();
+    renderPets();
+    renderControls();
+    renderOwners();
+    renderVets();
+    renderVeterinarianSelect();
+
+    generarCalendarioPersonalizado(
+        'appointmentCalendar',
+        'appointmentDate'
+    );
+}
+
+
+function renderAppointments() {
+    const agenda = document.getElementById('agendaList');
+    const latest = document.getElementById('latestAppointments');
+
+    if (!agenda || !latest) {
+        return;
+    }
+
+    agenda.innerHTML = '';
+    latest.innerHTML = '';
+
+    appointments.forEach((a, i) => {
+        const p = getAppointmentPet(a);
+
+        if (!p) {
+            return;
+        }
+
+        const html = appointmentCardHTML(a, p);
+
+        agenda.insertAdjacentHTML(
+            'beforeend',
+            html
+        );
+
+        if (i < 3) {
+            latest.insertAdjacentHTML(
+                'beforeend',
+                html
+            );
+        }
+    });
+}
+
+
+function appointmentCardHTML(a, p) {
+    const id = valueOf(
+        a,
+        'id',
+        'pk',
+        'id_control',
+        'id_consulta'
+    ) || '—';
+
+    const date = valueOf(
+        a,
+        'date',
+        'fecha'
+    ) || '—';
+
+    const time = valueOf(
+        a,
+        'time',
+        'hora'
+    ) || '—';
+
+    const status = valueOf(
+        a,
+        'status',
+        'estado'
+    ) || 'Pendiente';
+
+    return `
+        <button
+            onclick="openAppointment('${id}')"
+            class="appointment-card block w-full rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm"
+        >
+            <div class="flex items-center gap-4">
+
+                <div class="min-w-0 flex-1">
+
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        ${id}
+                    </span>
+
+                    <h4 class="mt-1 text-xl font-bold text-slate-900">
+                        ${petName(p)}
+                    </h4>
+
+                    <p class="mt-1 text-sm text-slate-500">
+                        ${petBreed(p)} · ${petOwner(p)}
+                    </p>
+
+                    <p class="mt-2 text-xs text-slate-400">
+                        ${date}
+                    </p>
+
+                </div>
+
+                <div class="border-l border-slate-100 pl-5 text-right">
+
+                    <p class="text-2xl font-bold text-navy-950">
+                        ${time}
+                    </p>
+
+                    <p class="mt-1 text-xs text-slate-400">
+                        ${status}
+                    </p>
+
+                </div>
+
+            </div>
+        </button>
+    `;
+}
+
+
+function renderPets() {
+    const list = document.getElementById('petsList');
+
+    if (!list) {
+        return;
+    }
+
+    const q = (
+        document.getElementById('petSearch')?.value || ''
+    )
+        .toLowerCase()
+        .trim();
+
+    const filtered = pets.filter(p =>
+        [
+            petName(p),
+            petChip(p),
+            petBreed(p),
+            petOwner(p)
+        ]
+            .join(' ')
+            .toLowerCase()
+            .includes(q)
+    );
+
+    document.getElementById('petCount').textContent =
+        `${filtered.length} mascotas encontradas`;
+
+    list.innerHTML =
+        filtered
+            .map(p => `
+                <button
+                    onclick="openPet('${petId(p)}')"
+                    class="pet-card w-full rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm"
+                >
+                    <div class="flex items-center gap-5">
+
+                        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-xl">
+                            🐾
+                        </div>
+
+                        <div class="min-w-0 flex-1">
+
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                Chip ${petChip(p) || 'sin chip'}
+                            </p>
+
+                            <h3 class="mt-1 text-xl font-bold text-slate-900">
+                                ${petName(p)}
+                            </h3>
+
+                            <p class="mt-1 text-sm text-slate-500">
+                                Dueño: ${petOwner(p)}
+                            </p>
+
+                        </div>
+
+                        <div class="hidden text-right sm:block">
+
+                            <p class="text-sm font-semibold">
+                                ${petBreed(p)}
+                            </p>
+
+                            <p class="mt-1 text-sm text-slate-500">
+                                ${petAge(p)}
+                            </p>
+
+                            <p class="mt-1 text-sm font-bold">
+                                ${petWeight(p)} kg
+                            </p>
+
+                        </div>
+
+                        <span class="text-xl text-slate-300">
+                            ›
+                        </span>
+
+                    </div>
+                </button>
+            `)
+            .join('')
+        ||
+        `
+            <div class="rounded-2xl bg-white p-8 text-center text-slate-500">
+                No se encontraron mascotas.
+            </div>
+        `;
+}
+
+
+function renderVeterinarianSelect() {
+    const s = document.getElementById('appointmentVet');
+
+    if (!s) {
+        return;
+    }
+
+    s.innerHTML =
+        '<option value="">Seleccionar veterinario...</option>';
+
+    veterinarians.forEach(v => {
+        s.insertAdjacentHTML(
+            'beforeend',
+            `
+                <option value="${valueOf(v, 'id', 'pk', 'id_vet')}">
+                    ${vetName(v)}
+                </option>
+            `
+        );
+    });
+}
+
+
+
+
+function renderOwners(search = '') {
+    const box = document.getElementById('ownerResults');
+
+    if (!box) {
+        return;
+    }
+
+    const q = search
+        .toLowerCase()
+        .trim();
+
+    const data = owners
+        .filter(o =>
+            [
+                valueOf(o, 'name', 'nombre'),
+                valueOf(o, 'rut'),
+                valueOf(o, 'phone', 'telefono'),
+                valueOf(o, 'address', 'direccion')
+            ]
+                .join(' ')
+                .toLowerCase()
+                .includes(q)
+        )
+        .slice(0, 10);
+
+    box.dataset.results =
+        JSON.stringify(data);
+
+    box.innerHTML = q
+        ? data
+            .map((o, i) => `
+                <button
+                    type="button"
+                    onclick="selectOwner(${i})"
+                    class="flex w-full justify-between border-b border-slate-100 px-4 py-3 text-left hover:bg-blue-50"
+                >
+                    <span>
+
+                        <strong class="block text-sm">
+                            ${valueOf(o, 'name', 'nombre')}
+                        </strong>
+
+                        <span class="text-xs text-slate-500">
+                            RUT: ${valueOf(o, 'rut') || '—'}
+                            ·
+                            ${valueOf(o, 'phone', 'telefono') || 'Sin teléfono'}
+                        </span>
+
+                    </span>
+
+                    <span class="text-blue-500">
+                        →
+                    </span>
+
+                </button>
+            `)
+            .join('')
+        : '';
+}
+
+
+function selectOwner(i) {
+    const o = JSON.parse(
+        document.getElementById('ownerResults')
+            .dataset
+            .results || '[]'
+    )[i];
+
+    if (!o) {
+        return;
+    }
+
+    document.getElementById('selectedOwnerRut').value =
+        valueOf(o, 'rut');
+
+    document.getElementById('ownerSearch').value =
+        valueOf(o, 'name', 'nombre');
+
+    document.getElementById('ownerResults').innerHTML = '';
+
+    const box =
+        document.getElementById('selectedOwner');
+
+    box.classList.remove('hidden');
+
+    box.innerHTML = `
+        <p class="text-xs font-bold uppercase text-blue-500">
+            Dueño seleccionado
+        </p>
+
+        <p class="mt-1 font-bold">
+            ${valueOf(o, 'name', 'nombre')}
+        </p>
+
+        <p class="mt-1 text-xs text-blue-700">
+            RUT ${valueOf(o, 'rut') || '—'}
+            ·
+            ${valueOf(o, 'phone', 'telefono') || 'Sin teléfono'}
+        </p>
+    `;
+}
+
+
+function clearOwnerSelection() {
+    document.getElementById('selectedOwnerRut').value = '';
+    document.getElementById('ownerSearch').value = '';
+    document.getElementById('ownerResults').innerHTML = '';
+
+    document.getElementById('selectedOwner').classList.add('hidden');
+}
+
+
+function renderVets(search = '') {
+    const list = document.getElementById('vetsList');
+
+    if (!list) {
+        return;
+    }
+
+    const q = search
+        .toLowerCase()
+        .trim();
+
+    list.innerHTML =
+        veterinarians
+            .filter(v =>
+                [
+                    vetName(v),
+                    valueOf(v, 'rut'),
+                    valueOf(v, 'mail', 'correo'),
+                    valueOf(v, 'telefono', 'phone')
+                ]
+                    .join(' ')
+                    .toLowerCase()
+                    .includes(q)
+            )
+            .map(v => `
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+
+                    <p class="font-bold">
+                        ${vetName(v)}
+                    </p>
+
+                    <p class="mt-1 text-sm text-slate-500">
+                        RUT ${valueOf(v, 'rut') || '—'}
+                    </p>
+
+                    <p class="mt-1 text-sm text-slate-500">
+                        ${valueOf(v, 'correo', 'mail') || '-'}
+                    </p>
+
+                    <p class="mt-1 text-xs text-slate-400">
+                        ${valueOf(v, 'telefono', 'phone') || 'Sin teléfono'}
+                    </p>
+
+                </div>
+            `)
+            .join('')
+        ||
+        `
+            <div class="md:col-span-2 rounded-2xl bg-white p-8 text-center text-slate-500">
+                No hay profesionales cargados.
+            </div>
+        `;
+}
+
+function generarCalendarioPersonalizado(calendar, input, mesSeleccionado = null, anioSeleccionado = null) {
+    const c = document.getElementById(calendar);
+    const i = document.getElementById(input);
+
+    if (!c || !i) {
+        return;
+    }
+
+    c.innerHTML = '';
+
+    const hoy = new Date();
+    const mm = hoy.getMonth();
+    const yy = hoy.getFullYear();
+    const diaHoy = hoy.getDate();
+
+    const meses = [
+        'Enero',
+        'Febrero',
+        'Marzo',
+        'Abril',
+        'Mayo',
+        'Junio',
+        'Julio',
+        'Agosto',
+        'Septiembre',
+        'Octubre',
+        'Noviembre',
+        'Diciembre'
+    ];
+
+    const dias = [
+        'Lun',
+        'Mar',
+        'Mié',
+        'Jue',
+        'Vie',
+        'Sáb',
+        'Dom'
+    ];
+
+    let m;
+
+    if (mesSeleccionado !== null) {
+        m = mesSeleccionado;
+    } else if (i.dataset.mesActual !== undefined) {
+        m = +i.dataset.mesActual;
+    } else {
+        m = mm;
+    }
+
+    let y;
+
+    if (anioSeleccionado !== null) {
+        y = anioSeleccionado;
+    } else if (i.dataset.anioActual !== undefined) {
+        y = +i.dataset.anioActual;
+    } else {
+        y = yy;
+    }
+
+    /*
+     * =========================================================
+     * ENCABEZADO DEL CALENDARIO
+     * =========================================================
+     */
+
+    const hd = document.createElement('div');
+
+    hd.className = 'col-span-7 flex items-center justify-between';
+
+    /*
+     * =========================================================
+     * BOTÓN MES ANTERIOR
+     * =========================================================
+     */
+
+    const prev = document.createElement('button');
+
+    prev.type = 'button';
+    prev.textContent = '←';
+    prev.className = 'rounded-lg px-3 py-2 font-bold text-slate-600 hover:bg-blue-50';
+
+    if (y === yy && m === mm) {
+        prev.disabled = true;
+        prev.classList.add('opacity-30', 'cursor-not-allowed');
+    }
+
+    prev.onclick = () => {
+        let nm = m - 1;
+        let ny = y;
+
+        if (nm < 0) {
+            nm = 11;
+            ny--;
+        }
+
+        if (ny < yy || (ny === yy && nm < mm)) {
+            return;
+        }
+
+        i.dataset.mesActual = nm;
+        i.dataset.anioActual = ny;
+
+        generarCalendarioPersonalizado(calendar,input,nm,ny);
+    };
+
+    /*
+     * =========================================================
+     * TÍTULO DEL MES
+     * =========================================================
+     */
+
+    const title = document.createElement('div');
+
+    title.className = 'font-bold text-slate-800';
+    title.textContent = `${meses[m]} ${y}`;
+
+    /*
+     * =========================================================
+     * BOTÓN MES SIGUIENTE
+     * =========================================================
+     */
+
+    const next = document.createElement('button');
+
+    next.type = 'button';
+    next.textContent = '→';
+    next.className = 'rounded-lg px-3 py-2 font-bold text-slate-600 hover:bg-blue-50';
+
+    next.onclick = () => {
+        let nm = m + 1;
+        let ny = y;
+
+        if (nm > 11) {
+            nm = 0;
+            ny++;
+        }
+
+        i.dataset.mesActual = nm;
+        i.dataset.anioActual = ny;
+
+        generarCalendarioPersonalizado(calendar,input,nm,ny);
+    };
+
+    hd.append(prev, title, next);
+    c.appendChild(hd);
+
+    /*
+     * =========================================================
+     * DÍAS DE LA SEMANA
+     * =========================================================
+     */
+
+    dias.forEach(d => {
+        const e = document.createElement('div');
+
+        e.className = 'text-center text-xs font-bold text-slate-400';
+        e.textContent = d;
+
+        c.appendChild(e);
+    });
+
+    /*
+     * =========================================================
+     * ESPACIOS ANTES DEL PRIMER DÍA
+     * =========================================================
+     */
+
+    let offset = new Date(y, m, 1).getDay();
+
+    offset = offset === 0 ? 6 : offset - 1;
+
+    for (let n = 0; n < offset; n++) {
+        const e = document.createElement('div');
+
+        e.className = 'h-10';
+
+        c.appendChild(e);
+    }
+
+    /*
+     * =========================================================
+     * DÍAS DEL MES
+     * =========================================================
+     */
+
+    const cantidadDias = new Date(y, m + 1, 0).getDate();
+
+    for (let d = 1; d <= cantidadDias; d++) {
+        const iso = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+        const b = document.createElement('button');
+
+        b.type = 'button';
+        b.textContent = d;
+        b.className = 'calendar-day';
+        b.dataset.fecha = iso;
+
+        /*
+         * =====================================================
+         * COMPROBAR SI LA FECHA YA PASÓ
+         * =====================================================
+         */
+
+        const fechaCalendario = new Date(y, m, d);
+
+        const fechaHoy = new Date(yy,mm,diaHoy);
+
+        if (fechaCalendario < fechaHoy) {
+            b.disabled = true;
+            b.classList.add('opacity-30', 'cursor-not-allowed');
+        }
+
+        /*
+         * =====================================================
+         * FECHA SELECCIONADA
+         * =====================================================
+         */
+
+        if (i.value === iso) {
+            b.classList.add('selected');
+        }
+
+        /*
+         * =====================================================
+         * SELECCIONAR FECHA
+         * =====================================================
+         */
+
+        b.onclick = () => {
+            if (fechaCalendario < fechaHoy) {
+                return;
+            }
+
+            c.querySelectorAll('[data-fecha]').forEach(x => {x.classList.remove('selected');});
+
+            b.classList.add('selected');
+
+            i.value = iso;
+
+            i.dataset.mesActual = m;
+            i.dataset.anioActual = y;
+
+            i.dispatchEvent(new Event('change'));
+        };
+
+        c.appendChild(b);
+    }
+}
+
+function updateAppointmentSummary() {
+    const p = getPet(
+        document.getElementById('appointmentPetId').value
+    );
+
+    const v = veterinarians.find(
+        x =>
+            String(
+                valueOf(x, 'id', 'pk', 'id_vet')
+            ) ===
+            String(
+                document.getElementById('appointmentVet').value
+            )
+    );
+
+    document.getElementById('summaryPet').textContent =
+        p
+            ? petName(p)
+            : '—';
+
+    document.getElementById('summaryDate').textContent =
+        document.getElementById('appointmentDate').value ||
+        '—';
+
+    document.getElementById('summaryHour').textContent =
+        document
+            .getElementById('appointmentHour')
+            .selectedOptions[0]
+            ?.textContent ||
+        '—';
+
+    document.getElementById('summaryVet').textContent =
+        v
+            ? vetName(v)
+            : '—';
+}
+
+
+function selectAppointmentPet(id) {
+    const p = getPet(id);
+
+    if (!p) {
+        return;
+    }
+
+    document.getElementById('appointmentPetId').value =
+        id;
+
+    document.getElementById('appointmentPetSearch').value =
+        petName(p);
+
+    document.getElementById('appointmentPetResults').innerHTML =
+        '';
+
+    const x =
+        document.getElementById('selectedAppointmentPet');
+
+    x.textContent =
+        `Mascota seleccionada: ${petName(p)} · Chip ${petChip(p) || '—'}`;
+
+    x.classList.remove('hidden');
+
+    updateAppointmentSummary();
+}
+
+
+function toggleProfileMenu(e) {
+    e.stopPropagation();
+    document.getElementById('profileMenu').classList.toggle('open');
+}
+
+
+function openEditProfile() {
+    document.getElementById('profileMenu').classList.remove('open');
+
+    document.getElementById('ProfileName').value = perfilData.name;
+    document.getElementById('ProfileRut').value = perfilData.rut;
+    document.getElementById('ProfileMail').value = perfilData.mail
+    document.getElementById('ProfilePhone').value = perfilData.phone;
+
+    openModal('profileModal');
+}
+
+
+function logoutDemo() {
+    document
+        .getElementById('profileMenu')
+        .classList
+        .remove('open');
+
+    if (confirm('¿Deseas cerrar la sesión?')) {
+        console.log(
+            'Conectar aquí con de Django'
+        );
+    }
+}
+
+
+function openNewOwnerModal() {
+    openModal('ownerModal');
+}
+
+
+function openNewVetModal() {
+    openModal('vetModal');
+}
+
+
+document.getElementById('appointmentPetSearch')?.addEventListener('input', function () {
+        const q = this.value.toLowerCase().trim();
+
+        const box = document.getElementById('appointmentPetResults');
+
+        const data = pets.filter(p =>[petName(p),petChip(p),petOwner(p)].join(' ').toLowerCase().includes(q)).slice(0, 8);
+
+        box.innerHTML = q ? data.map(p => `
+            <button type="button" onclick="selectAppointmentPet('${petId(p)}')" class="flex w-full justify-between border-b border-slate-100 px-4 py-3 text-left hover:bg-blue-50">
+                <span>
+                    <strong class="block text-sm">${petName(p)}</strong>
+                    <span class="text-xs text-slate-500">Chip ${petChip(p) || '—'}·${petOwner(p)}</span>
+                </span>
+                <span>→</span>
+            </button>
+        `).join(''): '';
+    }
+);
+
+
+document.getElementById('appointmentDate')?.addEventListener('change', function () {
+        const [y,m,d] = this.value.split('-');
+        document.getElementById('selectedDateLabel').textContent = this.value ? `Fecha seleccionada: ${d}/${m}/${y}` : 'Selecciona una fecha.';
+        updateAppointmentSummary();
+    }
+);
+
+
+document
+    .getElementById('appointmentHour')
+    ?.addEventListener(
+        'change',
+        updateAppointmentSummary
+    );
+
+
+document
+    .getElementById('appointmentVet')
+    ?.addEventListener(
+        'change',
+        updateAppointmentSummary
+    );
+
+
+document
+    .getElementById('ownerSearch')
+    ?.addEventListener(
+        'input',
+        function () {
+            renderOwners(this.value);
+        }
+    );
+
+
+function
+document.getElementById('appointmentForm')?.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const payload = {
+                mascota_id:
+                    document.getElementById(
+                        'appointmentPetId'
+                    ).value,
+
+                fecha:
+                    document.getElementById(
+                        'appointmentDate'
+                    ).value,
+
+                hora:
+                    document.getElementById(
+                        'appointmentHour'
+                    ).value,
+
+                id_vet:
+                    document.getElementById(
+                        'appointmentVet'
+                    ).value,
+
+                estado: 'Pendiente'
+            };
+
+            console.log(
+                'CREAR CONTROL:',
+                payload
+            );
+
+          
+            fetch('/aControl/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Control Agendado.');
+                } else {
+                    showToast(data.error, 'error')
+                }
+
+            })
+            .catch(error =>{
+                showToast('Error en el Servidor' + error.message, 'error')
+            })
+        }
+    );
+
+
+document
+    .getElementById('registerPetForm')
+    ?.addEventListener(
+        'submit',
+        function (e) {
+            e.preventDefault();
+
+            const payload = {
+                nchip:
+                    document.getElementById(
+                        'petRegisterChip'
+                    ).value,
+
+                nombre:
+                    document.getElementById(
+                        'petRegisterName'
+                    ).value,
+
+                raza:
+                    document.getElementById(
+                        'petRegisterBreed'
+                    ).value,
+
+                especie:
+                    document.getElementById(
+                        'petRegisterSpecies'
+                    ).value,
+
+                edad:
+                    document.getElementById(
+                        'petRegisterAge'
+                    ).value,
+
+                peso:
+                    document.getElementById(
+                        'petRegisterWeight'
+                    ).value,
+
+                rut_dueno:
+                    document.getElementById(
+                        'selectedOwnerRut'
+                    ).value
+            };
+
+            console.log(
+                'CREAR MASCOTA:',
+                payload
+            );
+
+            /*
+            Aquí puedes conectar:
+
+            fetch('/crear-mascota/', ...)
+            */
+
+            alert(
+                'Mascota registrada (modo demostración).'
+            );
+        }
+    );
+
+
+document
+    .getElementById('ownerForm')
+    ?.addEventListener(
+        'submit',
+        function (e) {
+            e.preventDefault();
+
+            console.log(
+                'CREAR DUEÑO:',
+                Object.fromEntries(
+                    new FormData(this)
+                )
+            );
+
+            alert(
+                'Dueño guardado (modo demostración).'
+            );
+
+            closeModal('ownerModal');
+        }
+    );
+
+
+document
+    .getElementById('vetForm')
+    ?.addEventListener(
+        'submit',
+        function (e) {
+            e.preventDefault();
+
+            console.log(
+                'CREAR VETERINARIO:',
+                Object.fromEntries(
+                    new FormData(this)
+                )
+            );
+
+            alert(
+                'Profesional guardado (modo demostración).'
+            );
+
+            closeModal('vetModal');
+        }
+    );
+
+
+document
+    .getElementById('profileForm')
+    ?.addEventListener(
+        'submit',
+        function (e) {
+            e.preventDefault();
+
+            alert(
+                'Datos actualizados (modo demostración).'
+            );
+
+            closeModal('profileModal');
+        }
+    );
+
+
+function showToast(message, type = "success") {
+
+    const container = document.getElementById("toast-container");
+
+    const toast = document.createElement("div");
+
+    let bgColor = "bg-green-600 text-white";
+
+    if (type === "error") {
+        bgColor = "bg-red-500 text-white";
+    }
+
+    if (type === "warning") {
+        bgColor = "bg-yellow-400 text-black";
+    }
+
+    toast.className = `
+        opacity-0 translate-y-4
+        px-4 py-3 rounded-lg shadow-lg text-sm font-medium
+        transition-all duration-300 ease-out
+        ${bgColor}
+    `;
+
+    toast.innerText = message;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.remove("opacity-0", "translate-y-4");
+        toast.classList.add("opacity-100", "translate-y-0");
+    }, 50);
+
+    setTimeout(() => {
+        toast.classList.remove("opacity-100", "translate-y-0");
+        toast.classList.add("opacity-0", "translate-y-4");
+
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3500);
+}
+
+
+
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 /* ============================================================
    INICIALIZACIÓN
    ============================================================ */
 
-renderAppointments();
-renderPets();
-renderControls();
+cargarDatos();
 
 </script>
 
