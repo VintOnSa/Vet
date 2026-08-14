@@ -36,6 +36,8 @@ def Inicio(request):
         }
     except Veterinario.DoesNotExist:
         print("Veterinario no Existe")
+    except Exception as e:
+        print(f"Error al Obtener Datos - Error: {e}")
         perfil = {}
         
     context = {
