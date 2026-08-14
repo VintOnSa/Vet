@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect
 from Apps.General.models import *
 from django.http import JsonResponse
 from django.core.cache import cache
+from django.db import IntegrityError, transaction
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.cache import never_cache
 
@@ -26,16 +27,16 @@ def Inicio(request):
     user = request.user
     perfil = {}
     try:
-        p = Veterinario.objects.get(correo = user.email)
+        p = Personal.objects.get(correo = user.email)
         perfil = {
             'name': p.nombre,
             'rut': p.rut,
             'mail': p.correo,
             'phone': p.telefono,
-            'type': "Veterinario" if p else "Administracion"
+            'type': p.profesion
         }
-    except Veterinario.DoesNotExist:
-        print("Veterinario no Existe")
+    except Personal.DoesNotExist:
+        print("Usuario no Existe")
     except Exception as e:
         print(f"Error al Obtener Datos - Error: {e}")
         perfil = {}
@@ -50,16 +51,17 @@ def Inicio(request):
 def gVets(request):
     if request.method == "GET":
         try:
-            v = Veterinario.objects.all()
+            v = Personal.objects.filter(profesion__icontains=['Veterinari']).exclude(activo="No")
             vets = []
             for vet in v:
                 vet_data = {
                     'id': vet.pk,
-                    'name': vet.nombre,
+                    'nombre': vet.nombre,
                     'rut': vet.rut,
-                    'mail': vet.correo,
-                    'address': vet.direccion,
-                    'phone': vet.telefono,
+                    'correo': vet.correo,
+                    'direccion': vet.direccion,
+                    'telefono': vet.telefono,
+                    'cargo': vet.cargo,
                 }
                 vets.append(vet_data)
 
@@ -100,22 +102,41 @@ def gOwner(request):
         return JsonResponse({'error': 'Sin autorizacion'}, status=401)
 
 
-def gPets(request):
+def gPatients(request):
     if request.method == "GET":
         try:
-            p = Paciente.objects.prefetch_related('dueno')
+            p = Paciente.objects.prefetch_related('dueno', 'vacunas')
             pets = []
             for pet in p:
-                controles = Control.objects.filter(mascota=pet)
+                agendas = Agenda.objects.prefetch_related('paciente', 'id_vet').filter(paciente=pet)
+                vacunas = pet.vacunas.all()
                 pet_data = {
                     'id': pet.pk,
-                    'chip': str(pet.nchip),
-                    'name': pet.nombre,
-                    'species': pet.especie,
-                    'breed': pet.raza,
-                    'age': pet.edad,
-                    'weight': pet.peso,
-                    'owner': pet.dueno.nombre,
+                    'nchip': str(pet.nchip),
+                    'nombre': pet.nombre,
+                    'especie': pet.especie,
+                    'raza': pet.raza,
+                    'genero':pet.genero,
+                    'edad': pet.edad,
+                    'meses': pet.meses,
+                    'peso': pet.peso,
+                    'marca': pet.marca,
+                    'estd_rep': pet.estd_rep,
+                    'paricion': pet.paricion,
+                    'datos': pet.datos,
+                    'fecha_ins': pet.fecha_ins.strftime(str("%d-%m-%Y")),
+                    'dueno': {
+                        'nombre': pet.dueno.nombre,
+                        'rut': pet.dueno.rut
+                    },
+                    'vacunas': [
+                        {   
+                            'id': vac.vacuna.pk,
+                            'codigo': vac.vacuna.codigo,
+                            'vacuna': vac.nombre
+                        } 
+                        for vac in vacunas
+                    ],
                     'controls' : [
                         { 
                             'id': str(c.pk),
@@ -126,15 +147,14 @@ def gPets(request):
                             'observations': c.observaciones,
                             'vet': c.veterinario
                         }
-                        for c in controles
+                        for c in agendas
                     ] 
                 }
                 pets.append(pet_data)
 
             data = {
-                'mascotas' : pets
+                'pacientes' : pets
             }
-            print(data)
             
             return JsonResponse(data)    
         except Exception as e:
@@ -147,25 +167,34 @@ def gPets(request):
 def gAppointments(request):
     if request.method == "GET":
         try:
-            c = Control.objects.prefetch_related('mascota')
-            controles = []
-            for control in c:
-                control_data = {
+            c = Agenda.objects.prefetch_related('paciente', 'id_vet')
+            agendas = []
+            for agenda in c:
+                agenda_data = {
 
-                    'id': str(control.pk),
-                    'petId': control.mascota.pk,
-                    'date': control.fecha.strftime("%d/%m/%Y"),
-                    'time': control.hora.strftime("%H:%M"),
-                    'vet': control.veterinario,
-                    'status': control.estado
+                    'id': str(agenda.pk),
+                    'paciente': agenda.paciente.pk,
+                    'procedimiento': agenda.procedimiento,
+                    'datos_ing': agenda.datos_ing,
+                    'fecha': agenda.fecha,
+                    'hora': agenda.hora.strftime("%H:%M"),
+                    'costo': agenda.costo,
+                    'id_vet': agenda.id_vet.pk,
+                    'veterinario': agenda.veterinario,
+                    'estado': agenda.estado,
+                    'peso': agenda.peso,
+                    'edad': agenda.edad,
+                    'meses': agenda.meses,
+                    'temperatura': agenda.temperatura,
+                    'diagnostico': agenda.diagnostico,
+                    'observaciones': agenda.observaciones
                 }
 
-                controles.append(control_data)
+                agendas.append(agenda_data)
 
             data = {
-                'controles' : controles 
+                'agendas' : agendas 
             }
-            print(data)
             
             return JsonResponse(data)    
         except Exception as e:
@@ -175,26 +204,59 @@ def gAppointments(request):
         return JsonResponse({'error': 'Sin autorizacion'}, status=401)
 
 
+def gVaccines(request):
+    if request.method == "GET":
+        try:
+            v = Insumo.objects.filter(tipo='vacuna')
+            vacunas = []
+            for vacuna in v:
+                vac_data = {
+                    'id': vacuna.pk,
+                    'codigo': vacuna.codigo,
+                    'nombre': vacuna.nombre
+                }
+                vacunas.append(vac_data)
+            data = {
+                'vacunas': vacunas
+            }
+            return JsonResponse(data)
+        except Exception as e:
+            print(f"Error al Obtener Datos - Error: {e}")
+            return JsonResponse({'error': 'Error al Obtener Datos'}, status=404)
+    else:
+        return JsonResponse({'error': 'Sin autorizacion'}, status=401)
 
 #===================================================================================================================================================
 
 def aControl(request):
     if request.method == "POST":
-        data = {
-            'message': 'No paso'
-        }
+        data = {}
         try:
-            mas = request.POST.get('mascota_id')
+            paciente = Paciente.objects.get(pk=int(request.POST.get('paciente')))
+            datos_ing = request.POST.get('datos_ing')
             fecha = request.POST.get('fecha')
             hora = request.POST.get('hora')
-            vet = request.POST.get('id_vet')
+            vet = Personal.objects.get(pk=int(request.POST.get('id_vet')))
 
-            print(mas,fecha,hora,vet)
-            data = {
-                'mensaje': 'Paso'
-            }
+            with transaction.atomic():
+                Agenda.objects.create(
+                    paciente = paciente,
+                    datos_ing = datos_ing,
+                    fecha = fecha,
+                    hora = hora,
+                    veterinario = vet.nombre,
+                    id_vet = vet
+                )
+                data = {
+                    'success': True
+                }
+
         except Exception as e:
-            print(f"Error al Guardar el Control - Error: {e}")
+            print(f"Error al guardar datos de Agenda - Error: {e}")
+            data = {
+                'success': False,
+                'error': f"Error al registrar registro - Error: {e}"
+            }
     return JsonResponse(data)
 
 

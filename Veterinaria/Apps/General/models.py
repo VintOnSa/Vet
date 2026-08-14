@@ -2,12 +2,39 @@ from django.db import models
 
 # Create your models here.
 
-class Veterinario(models.Model):
+class Bodega(models.Model):
+    codigo = models.CharField(max_length=100, null=True, blank=True)
+    nombre = models.CharField(max_length=100, null=True, blank=True)
+    ubicacion = models.CharField(max_length=100, null=True, blank=True)
+    encargado = models.CharField(max_length=100, null=True, blank=True)
+
+    def __str__(self):
+        txt = "Codigo: {0} - Nombre: {1} - Ubicacion: {2} - Encargado: {3}"
+        return txt.format(self.codigo, self.nombre, self.ubicacion, self.encargado)
+
+class Insumo(models.Model):
+    codigo = models.CharField(max_length=100, null=True, blank=True)
+    nombre = models.CharField(max_length=300, null=True, blank=True)
+    tipo = models.CharField(max_length=50, null=True, blank=True)
+    unidad = models.CharField(max_length=50, null=True, blank=True)
+    stock = models.PositiveIntegerField(null=True, blank=True)
+    precio = models.PositiveIntegerField(null=True, blank=True)
+    descuento = models.PositiveIntegerField(null=True, blank=True)
+    ubicacion = models.ForeignKey(Bodega, on_delete=models.SET_DEFAULT, default=1)
+
+    def __str__(self):
+        txt = "Codigo: {0} - Nombre: {1} - Tipo: {2} - Unidad: {3} - Stock: {4} - Precio {5} - Desc: {6} - Ubicacion: {7}"
+        return txt.format(self.codigo, self.nombre, self.tipo, self.unidad, self.stock, self.precio, self.descuento, self.ubicacion.nombre)
+
+class Personal(models.Model):
     nombre = models.CharField(max_length=200, blank=True, null=True)
     rut = models.CharField(max_length=20, blank=True, null=True)
     correo = models.CharField(max_length=200, blank=True, null=True)
     telefono = models.IntegerField(blank=True, null=True)
     direccion = models.CharField(max_length=200, blank=True, null=True)
+    cargo = models.CharField(max_length=100, null=True, blank=True)
+    usuario = models.CharField(max_length=100, null=True, blank=True)
+    activo = models.CharField(max_length=10, null=True, blank=True)
 
     def __str__(self):
         txt = "Nombre: {0} - Rut: {1} - Correo: {2} - Telefono: {3}"
@@ -36,6 +63,8 @@ class Paciente(models.Model):
     peso = models.CharField(max_length=10, blank=True, null=True)
     marca = models.CharField(max_length=50, null=True, blank=True)
     estd_rep = models.CharField(max_length=50, null=True, blank=True)
+    paricion = models.CharField(max_length=100, null=True, blank=True)
+    datos = models.CharField(max_length=100, null=True, blank=True)
     dueno = models.ForeignKey(Dueno, on_delete=models.CASCADE)
     fecha_ins = models.DateTimeField(null=True, blank=True)
 
@@ -43,24 +72,32 @@ class Paciente(models.Model):
         txt = "N°Chip: {0} - Nombre: {1} - Edad: {2} - Dueño: {3}"
         return txt.format(self.nchip, self.nombre, self.edad, self.dueno.nombre)
 
-class Vacunas(models.Model):
+class VacunasPaciente(models.Model):
     paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, related_name='vacunas')
-    vacunas = models.CharField(max_length=300, null=True, blank=True)
+    vacuna = models.ForeignKey(Insumo, on_delete=models.SET_DEFAULT, default=1)
+    nombre = models.CharField(max_length=300, null=True, blank=True)
+    fecha = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        txt = "Paciente: {0} - Vacuna: {1} - Fecha: {2}"
+        return txt.format(self.paciente.nombre, self.nombre)
 
 
-class Control(models.Model):
+class Agenda(models.Model):
     paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, null=True, blank=True)
     procedimiento = models.CharField(max_length=200, blank=True, null=True)
     datos_ing = models.CharField(max_length=200, blank=True, null=True)
     fecha = models.DateField(null=True, blank=True)
     hora = models.TimeField(null=True, blank=True)
     peso = models.CharField(max_length=10, null=True, blank=True)
-    edad = models.CharField(max_length=50, null=True, blank=True)
+    edad = models.IntegerField(blank=True, null=True)
+    meses = models.IntegerField(null=True, blank=True)
+    temperatura = models.CharField(max_length=50, blank=True, null=True)
     diagnostico = models.CharField(max_length=200, blank=True, null=True)
     observaciones = models.CharField(max_length=800, blank=True, null=True)
     costo = models.IntegerField(blank=True, null=True)
     veterinario = models.CharField(max_length=200, blank=True, null=True) 
-    id_vet = models.ForeignKey(Veterinario, on_delete=models.SET_DEFAULT, default=1)
+    id_vet = models.ForeignKey(Personal, on_delete=models.SET_DEFAULT, default=1)
     estado = models.CharField(max_length=100, null=True, blank=True,default="Pendiente")
 
     def __str__(self):

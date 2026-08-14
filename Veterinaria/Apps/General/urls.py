@@ -7,10 +7,11 @@ urlpatterns = [
     path('logout/', views.logout_view, name="Logout"),
 
 #================================ FETCHS ============================================
-    path('gPets/', views.gPets, name="ObtenerMascotas"),
-    path('gAppointments/', views.gAppointments, name="ObtenerControles"),
+    path('gPacientes/', views.gPatients, name="ObtenerMascotas"),
+    path('gAgenda/', views.gAppointments, name="ObtenerControles"),
     path('gOwner/', views.gOwner, name="ObtenerDuenos"),
-    path('gVets/', views.gVets, name="ObtenerVeterinarios"),
+    path('gVeterinarios/', views.gVets, name="ObtenerVeterinarios"),
+    path('gVacunas/', views.gVaccines, name="ObtenerVacunas"),
 
 
 #========================= FUNCIONES CONTROLES ======================================
