@@ -10,6 +10,11 @@
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
 
+    <!-- Exportación a PDF y Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -495,7 +500,16 @@
                                 <h3 class="font-black text-navy-800">Agendas</h3>
                                 <p id="agendaSubtitle" class="text-sm text-slate-400">Todas las agendas</p>
                             </div>
-                            <input id="agendaSearch" class="rounded-xl border px-4 py-2 text-sm md:w-80" placeholder="Buscar paciente o procedimiento..." />
+                            <div class="flex gap-2">
+                                <input id="agendaSearch" class="w-full rounded-xl border px-4 py-2 text-sm md:w-80" placeholder="Buscar paciente o procedimiento..." />
+                                <div class="relative export-menu-wrap">
+                                    <button onclick="toggleExportMenu('exportMenuAgenda')" class="btnLight whitespace-nowrap">⬇ Exportar</button>
+                                    <div id="exportMenuAgenda" class="export-menu hidden absolute right-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                                        <button onclick="exportAgendaPDF()" class="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50">📄 Exportar PDF</button>
+                                        <button onclick="exportAgendaExcel()" class="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50">📊 Exportar Excel</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div id="agendaList" class="space-y-3"></div>
                         <div id="agendaPages" class="mt-5"></div>
@@ -511,7 +525,16 @@
                             <h3 class="text-2xl font-black text-navy-800">Pacientes</h3>
                             <p class="text-sm text-slate-500">Fichas clínicas, vacunas e historial.</p>
                         </div>
-                        <button onclick="newPatient()" class="rounded-xl bg-navy-700 px-4 py-2 font-bold text-white">+ Registrar paciente</button>
+                        <div class="flex gap-2">
+                            <div class="relative export-menu-wrap">
+                                <button onclick="toggleExportMenu('exportMenuPacientes')" class="btnLight whitespace-nowrap">⬇ Exportar</button>
+                                <div id="exportMenuPacientes" class="export-menu hidden absolute right-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                                    <button onclick="exportPatientsPDF()" class="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50">📄 Exportar PDF</button>
+                                    <button onclick="exportPatientsExcel()" class="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50">📊 Exportar Excel</button>
+                                </div>
+                            </div>
+                            <button onclick="newPatient()" class="rounded-xl bg-navy-700 px-4 py-2 font-bold text-white">+ Registrar paciente</button>
+                        </div>
                     </div>
                     <div class="rounded-3xl border bg-white p-5 shadow-sm">
                         <div class="mb-5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -565,6 +588,13 @@
                                             <input id="adminSearch" class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none focus:border-blue-400 focus:bg-white" placeholder="Buscar en este módulo..." />
                                         </div>
                                         <div id="adminExtraFilter" class="w-full md:w-64"></div>
+                                        <div class="relative export-menu-wrap">
+                                            <button onclick="toggleExportMenu('exportMenuAdmin')" class="btnLight whitespace-nowrap">⬇ Exportar</button>
+                                            <div id="exportMenuAdmin" class="export-menu hidden absolute right-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                                                <button onclick="exportAdminPDF()" class="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50">📄 Exportar PDF</button>
+                                                <button onclick="exportAdminExcel()" class="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50">📊 Exportar Excel</button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div id="adminTable" class="overflow-x-auto"></div>
@@ -1211,6 +1241,74 @@
             setTimeout(() => el.innerHTML = '', 3000);
         }
 
+        // ============================================================
+        // EXPORTACIÓN A PDF / EXCEL
+        // ============================================================
+        function exportExcel(filename, sheets) {
+            const list = Array.isArray(sheets) ? sheets : [sheets];
+            const wb = XLSX.utils.book_new();
+            list.forEach(s => {
+                const ws = XLSX.utils.aoa_to_sheet([s.headers, ...s.rows]);
+                XLSX.utils.book_append_sheet(wb, ws, (s.name || 'Datos').slice(0, 31));
+            });
+            XLSX.writeFile(wb, `${filename}.xlsx`);
+        }
+
+        function exportPDF(filename, title, sections) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            let y = 16;
+            doc.setFontSize(15);
+            doc.text(title, 14, y);
+            y += 6;
+            doc.setFontSize(9);
+            doc.setTextColor(120);
+            doc.text(new Date().toLocaleDateString('es-CL'), 14, y);
+            doc.setTextColor(0);
+            y += 6;
+
+            sections.forEach(sec => {
+                if (y > 270) { doc.addPage(); y = 16; }
+                if (sec.heading) {
+                    doc.setFontSize(11);
+                    doc.text(sec.heading, 14, y);
+                    y += 3;
+                }
+                doc.autoTable({
+                    head: [sec.headers],
+                    body: sec.rows,
+                    startY: y,
+                    styles: { fontSize: 8, cellPadding: 2 },
+                    headStyles: { fillColor: [23, 42, 61] },
+                    margin: { left: 14, right: 14 }
+                });
+                y = doc.lastAutoTable.finalY + 10;
+            });
+
+            doc.save(`${filename}.pdf`);
+        }
+
+        function slugFile(s) {
+            const sinTildes = String(s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '');
+            return sinTildes.trim().replace(/\s+/g, '_').toLowerCase() || 'datos';
+        }
+
+        function toggleExportMenu(id) {
+            document.querySelectorAll('.export-menu').forEach(el => {
+                if (el.id !== id) el.classList.add('hidden');
+            });
+            const el = byId(id);
+            if (el) el.classList.toggle('hidden');
+        }
+
+        function closeExportMenus() {
+            document.querySelectorAll('.export-menu').forEach(el => el.classList.add('hidden'));
+        }
+
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.export-menu-wrap')) closeExportMenus();
+        });
+
         function openModal(id) {
             const el = byId(id);
             if (el) el.classList.add('open');
@@ -1683,14 +1781,7 @@ async function cargarDatos() {
         }
 
         function renderAgenda() {
-            const searchEl = byId('agendaSearch');
-            let q = (searchEl?.value || '').toLowerCase();
-            let list = appointments.filter(a => {
-                let ok = `${a.paciente.nombre} ${a.paciente.nchip} ${a.procedimiento} ${a.datos_ing}`
-                    .toLowerCase()
-                    .includes(q);
-                return ok && (!selectedDay || a.fecha === selectedDay);
-            });
+            let list = getFilteredAgendaList();
 
             let start = (pages.agenda - 1) * PAGE_SIZE;
             const agendaList = byId('agendaList');
@@ -1717,14 +1808,53 @@ async function cargarDatos() {
             });
         }
 
-        function renderPatients() {
+        function getFilteredAgendaList() {
+            const searchEl = byId('agendaSearch');
+            let q = (searchEl?.value || '').toLowerCase();
+            return appointments.filter(a => {
+                let ok = `${a.paciente.nombre} ${a.paciente.nchip} ${a.procedimiento} ${a.datos_ing}`
+                    .toLowerCase()
+                    .includes(q);
+                return ok && (!selectedDay || a.fecha === selectedDay);
+            });
+        }
+
+        function getAgendaExportData() {
+            const list = [...getFilteredAgendaList()].sort((a, b) => `${a.fecha}${a.hora}`.localeCompare(`${b.fecha}${b.hora}`));
+            const headers = ['Fecha', 'Hora', 'Paciente', 'Tipo', 'Procedimiento', 'Veterinario', 'Estado', 'Costo'];
+            const rows = list.map(a => [
+                dateCL(a.fecha), a.hora, a.paciente.nombre, a.tipo || '', a.procedimiento || '',
+                a.veterinario || getVet(a.id_vet), a.estado || '', a.costo ?? ''
+            ]);
+            return { headers, rows };
+        }
+
+        function exportAgendaPDF() {
+            const { headers, rows } = getAgendaExportData();
+            if (!rows.length) { toast('No hay datos para exportar.', true); return; }
+            exportPDF('agenda', 'Agenda', [{ headers, rows }]);
+            closeExportMenus();
+        }
+
+        function exportAgendaExcel() {
+            const { headers, rows } = getAgendaExportData();
+            if (!rows.length) { toast('No hay datos para exportar.', true); return; }
+            exportExcel('agenda', { name: 'Agenda', headers, rows });
+            closeExportMenus();
+        }
+
+        function getFilteredPatientsList() {
             const searchEl = byId('patientSearch');
             let q = (searchEl?.value || '').toLowerCase().trim();
-            let list = patients.filter(p =>
+            return patients.filter(p =>
                 `${p.nchip} ${p.nombre} ${p.especie} ${p.raza} ${p.dueno?.name || p.dueno?.nombre || ''} ${p.dueno?.rut || ''}`
                 .toLowerCase()
                 .includes(q)
             );
+        }
+
+        function renderPatients() {
+            let list = getFilteredPatientsList();
 
             let start = (pages.patients - 1) * PAGE_SIZE;
             const countEl = byId('patientCount');
@@ -1754,6 +1884,31 @@ async function cargarDatos() {
                 pages.patients = p;
                 renderPatients();
             });
+        }
+
+        function getPatientsExportData() {
+            const list = getFilteredPatientsList();
+            const headers = ['Chip', 'Nombre', 'Especie', 'Raza', 'Género', 'Edad', 'Peso', 'Dueño', 'RUT Dueño'];
+            const rows = list.map(p => [
+                p.nchip, p.nombre, p.especie, p.raza, p.genero,
+                `${p.edad || 0}a ${p.meses || 0}m`, p.peso || '',
+                p.dueno?.name || p.dueno?.nombre || '', p.dueno?.rut || ''
+            ]);
+            return { headers, rows };
+        }
+
+        function exportPatientsPDF() {
+            const { headers, rows } = getPatientsExportData();
+            if (!rows.length) { toast('No hay datos para exportar.', true); return; }
+            exportPDF('pacientes', 'Listado de pacientes', [{ headers, rows }]);
+            closeExportMenus();
+        }
+
+        function exportPatientsExcel() {
+            const { headers, rows } = getPatientsExportData();
+            if (!rows.length) { toast('No hay datos para exportar.', true); return; }
+            exportExcel('pacientes', { name: 'Pacientes', headers, rows });
+            closeExportMenus();
         }
 
         function renderStockAlerts() {
@@ -2311,6 +2466,13 @@ async function cargarDatos() {
                             <b>Ficha clínica</b>
                         </div>
                         <div class="flex items-center gap-2">
+                            <div class="relative export-menu-wrap">
+                                <button onclick="toggleExportMenu('exportMenuFicha')" class="btnLight">⬇ Exportar</button>
+                                <div id="exportMenuFicha" class="export-menu hidden absolute right-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                                    <button onclick="exportPatientPDF(${p.id})" class="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50">📄 Exportar PDF</button>
+                                    <button onclick="exportPatientExcel(${p.id})" class="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50">📊 Exportar Excel</button>
+                                </div>
+                            </div>
                             <button onclick="editPatientForm(${p.id})" class="btnLight">✏️ Editar paciente</button>
                             <button onclick="closeModal('modalPatientDetail')">✕</button>
                         </div>
@@ -2391,6 +2553,67 @@ async function cargarDatos() {
                 `;
             }
             openModal('modalPatientDetail');
+        }
+
+        function getPatientFichaSections(p) {
+            const hist = appointments.filter(a => String(a.paciente.id) === String(p.id))
+                .sort((a, b) => `${b.fecha}${b.hora}`.localeCompare(`${a.fecha}${a.hora}`));
+
+            const datosHeaders = ['Campo', 'Valor'];
+            const datosRows = [
+                ['Chip', p.nchip || ''],
+                ['Nombre', p.nombre || ''],
+                ['Especie', p.especie || ''],
+                ['Raza', p.raza || ''],
+                ['Género', p.genero || ''],
+                ['Edad', `${p.edad || 0} años ${p.meses || 0} meses`],
+                ['Peso', p.peso ? `${p.peso} kg` : ''],
+                ['Reproductivo', p.estd_rep || ''],
+                ['Marca', p.marca || ''],
+                ['Dueño', p.dueno?.name || p.dueno?.nombre || ''],
+                ['RUT dueño', p.dueno?.rut || ''],
+                ['Fecha inscripción', p.fecha_ins || '']
+            ];
+
+            const vacunasHeaders = ['Vacuna', 'Fecha'];
+            const vacunasRows = (p.vacunas || []).map(v => [v.vacuna, v.fecha || '—']);
+
+            const cirugiasHeaders = ['Procedimiento', 'Fecha'];
+            const cirugiasRows = (p.cirugias || []).map(c => [c.nombre, c.fecha || '—']);
+
+            const controlesHeaders = ['Fecha', 'Hora', 'Procedimiento', 'Diagnóstico', 'Veterinario', 'Estado'];
+            const controlesRows = hist.map(a => [
+                dateCL(a.fecha), a.hora, a.procedimiento || '', a.diagnostico || '',
+                a.veterinario || getVet(a.id_vet), a.estado || ''
+            ]);
+
+            return { datosHeaders, datosRows, vacunasHeaders, vacunasRows, cirugiasHeaders, cirugiasRows, controlesHeaders, controlesRows };
+        }
+
+        function exportPatientPDF(id) {
+            const p = patients.find(x => String(x.id) === String(id));
+            if (!p) return;
+            const s = getPatientFichaSections(p);
+            exportPDF(`ficha_${slugFile(p.nombre)}`, `Ficha clínica — ${p.nombre}`, [
+                { heading: 'Datos del paciente', headers: s.datosHeaders, rows: s.datosRows },
+                { heading: 'Vacunas', headers: s.vacunasHeaders, rows: s.vacunasRows.length ? s.vacunasRows : [['Sin vacunas registradas', '']] },
+                { heading: 'Cirugías / Procedimientos', headers: s.cirugiasHeaders, rows: s.cirugiasRows.length ? s.cirugiasRows : [['Sin registros', '']] },
+                { heading: 'Historial de controles', headers: s.controlesHeaders, rows: s.controlesRows.length ? s.controlesRows : [['Sin historial', '', '', '', '', '']] }
+            ]);
+            closeExportMenus();
+        }
+
+        function exportPatientExcel(id) {
+            const p = patients.find(x => String(x.id) === String(id));
+            if (!p) return;
+            const s = getPatientFichaSections(p);
+            exportExcel(`ficha_${slugFile(p.nombre)}`, [
+                { name: 'Datos', headers: s.datosHeaders, rows: s.datosRows },
+                { name: 'Vacunas', headers: s.vacunasHeaders, rows: s.vacunasRows },
+                { name: 'Cirugias', headers: s.cirugiasHeaders, rows: s.cirugiasRows },
+                { name: 'Controles', headers: s.controlesHeaders, rows: s.controlesRows }
+            ]);
+            closeExportMenus();
         }
 
         function df(l, v) {
@@ -3081,8 +3304,7 @@ async function cargarDatos() {
             return [];
         }
 
-        function renderAdminWorkspace() {
-            const type = currentAdminType;
+        function getFilteredAdminList(type) {
             const search = byId('adminSearch');
             const q = (search?.value || '').toLowerCase().trim();
             let list = adminData(type).filter(x => JSON.stringify(x).toLowerCase().includes(q));
@@ -3100,6 +3322,12 @@ async function cargarDatos() {
             if (type === 'inventario' && window.adminInventoryFilter) {
                 list = list.filter(x => x.tipo === window.adminInventoryFilter);
             }
+            return list;
+        }
+
+        function renderAdminWorkspace() {
+            const type = currentAdminType;
+            let list = getFilteredAdminList(type);
 
             renderAdminFilter(type);
             const total = list.length;
@@ -3112,6 +3340,49 @@ async function cargarDatos() {
                 currentAdminPage = p;
                 renderAdminWorkspace();
             });
+        }
+
+        function getAdminExportData() {
+            const type = currentAdminType;
+            const list = getFilteredAdminList(type);
+            const title = adminConfig[type]?.title || 'Datos';
+            let headers = [], rows = [];
+
+            if (type === 'inventario') {
+                headers = ['Código', 'Nombre', 'Tipo', 'Unidad', 'Bodega', 'Stock', 'Precio', 'Desc.', 'Precio final'];
+                rows = list.map(x => {
+                    const fin = Math.round(Number(x.precio || 0) * (1 - Number(x.descuento || 0) / 100));
+                    return [x.codigo, x.nombre, x.tipo, x.unidad, x.ubicacion_nombre || '—', x.stock ?? '', x.precio ?? '', `${Number(x.descuento || 0)}%`, fin];
+                });
+            } else if (type === 'bodegas') {
+                headers = ['Código', 'Nombre', 'Ubicación', 'Encargado'];
+                rows = list.map(x => [x.codigo, x.nombre, x.ubicacion || '', x.encargado || '']);
+            } else if (type === 'procedimientos') {
+                headers = ['Procedimiento', 'Precio'];
+                rows = list.map(x => [x.nombre, x.precio ?? '']);
+            } else if (type === 'razas') {
+                headers = ['Especie', 'Raza'];
+                rows = list.map(x => [species.find(s => String(s.id) === String(x.especie_id))?.nombre || '—', x.nombre]);
+            } else if (type === 'personal') {
+                headers = ['RUT', 'Nombre', 'Cargo', 'Teléfono', 'Correo', 'Estado'];
+                rows = list.map(x => [x.rut, x.nombre, x.cargo, x.telefono, x.correo, x.activo === 'true' ? 'Activo' : 'Inactivo']);
+            }
+
+            return { title, headers, rows };
+        }
+
+        function exportAdminPDF() {
+            const { title, headers, rows } = getAdminExportData();
+            if (!rows.length) { toast('No hay datos para exportar.', true); return; }
+            exportPDF(slugFile(title), title, [{ headers, rows }]);
+            closeExportMenus();
+        }
+
+        function exportAdminExcel() {
+            const { title, headers, rows } = getAdminExportData();
+            if (!rows.length) { toast('No hay datos para exportar.', true); return; }
+            exportExcel(slugFile(title), { name: title.slice(0, 31), headers, rows });
+            closeExportMenus();
         }
 
         function renderAdminFilter(type) {
