@@ -1465,19 +1465,19 @@ let dashStats = null;
 async function cargarDatos() {
             try {
                 const [pa,ap,ow,ve,pr,i,wa,sp,br,st,ho,va,ds] = await Promise.all([
-                    fetch('/gPacientes/').then(r => r.ok ? r.json() : {}),
-                    fetch('/gAgenda/').then(r => r.ok ? r.json() : {}),
-                    fetch('/gOwner/').then(r => r.ok ? r.json() : {}),
-                    fetch('/gVeterinarios/').then(r => r.ok ? r.json() : {}),
-                    fetch('/gProcedimientos/').then(r => r.ok ? r.json() : {}),
-                    fetch('/gInventario/').then(r => r.ok ? r.json() : {}),
-                    fetch('/gBodegas/').then(r => r.ok ? r.json() : {}),
-                    fetch('/gEspecies/').then(r => r.ok ? r.json() : {}),
-                    fetch('/gRazas/').then(r => r.ok ? r.json() : {}),
-                    fetch('/gPersonal/').then(r => r.ok ? r.json() : {}),
-                    fetch('/gHoras/').then(r => r.ok ? r.json() : {}),
-                    fetch('/gVacunas/').then(r => r.ok ? r.json() : {}),
-                    fetch('/gDatosDash/').then(r => r.ok ? r.json() : null),
+                    fetch('/gPacientes/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                    fetch('/gAgenda/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                    fetch('/gOwner/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                    fetch('/gVeterinarios/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                    fetch('/gProcedimientos/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                    fetch('/gInventario/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                    fetch('/gBodegas/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                    fetch('/gEspecies/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                    fetch('/gRazas/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                    fetch('/gPersonal/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                    fetch('/gHoras/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                    fetch('/gVacunas/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                    fetch('/gDatosDash/').then(r => r.ok ? r.json() : null).catch(() => null),
                 ]);
 
                 patients = pa.pacientes || demoPatients || [];

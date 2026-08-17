@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Iniciar sesión — Veterinaria Municipal</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            50: '#f3f6fa',
+                            100: '#e7edf5',
+                            200: '#cbd7e6',
+                            300: '#a5b8cf',
+                            400: '#7895b5',
+                            500: '#4d7097',
+                            600: '#365778',
+                            700: '#29445f',
+                            800: '#1f354a',
+                            900: '#172a3d',
+                            950: '#0d1b2a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+    </style>
+</head>
+<body class="flex min-h-screen items-center justify-center bg-navy-950 px-4">
+    <div class="w-full max-w-sm">
+        <div class="mb-6 flex flex-col items-center text-center">
+            <div class="mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-blue-500 text-xl font-black text-white">VM</div>
+            <p class="text-xs text-blue-300">Municipalidad de San Joaquín</p>
+            <h1 class="font-black text-white">Veterinaria Municipal</h1>
+        </div>
+
+        <div class="rounded-3xl bg-white p-7 shadow-2xl">
+            <h2 class="mb-1 text-xl font-black text-navy-900">Iniciar sesión</h2>
+            <p class="mb-5 text-sm text-slate-500">Ingresa tus credenciales para acceder al sistema.</p>
+
+            {% if error %}
+            <div class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{{ error }}</div>
+            {% endif %}
+
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <div>
+                    <label class="mb-1 block text-sm font-bold text-slate-700">Usuario</label>
+                    <input name="usuario" autocomplete="username" required autofocus
+                        class="w-full rounded-xl border border-slate-200 px-4 py-2.5 outline-none focus:border-blue-500" />
+                </div>
+                <div>
+                    <label class="mb-1 block text-sm font-bold text-slate-700">Contraseña</label>
+                    <input name="password" type="password" autocomplete="current-password" required
+                        class="w-full rounded-xl border border-slate-200 px-4 py-2.5 outline-none focus:border-blue-500" />
+                </div>
+                <button type="submit" class="w-full rounded-xl bg-navy-700 py-2.5 font-bold text-white hover:bg-navy-800">
+                    Entrar
+                </button>
+            </form>
+        </div>
+
+        <p class="mt-5 text-center text-xs text-slate-500">Sistema de gestión veterinaria</p>
+    </div>
+</body>
+</html>

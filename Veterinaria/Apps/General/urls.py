@@ -4,6 +4,8 @@ from Apps.General import views
 
 urlpatterns = [
     path('', views.Inicio, name="Inicio"),
+    path('login/', views.login_view, name="Login"),
+    path('login', views.login_view),
     path('logout/', views.logout_view, name="Logout"),
 
 #================================ FETCHS ============================================
