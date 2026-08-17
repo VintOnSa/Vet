@@ -102,7 +102,7 @@ class VacunasPaciente(models.Model):
 
     def __str__(self):
         txt = "Paciente: {0} - Vacuna: {1} - Fecha: {2}"
-        return txt.format(self.paciente.nombre, self.nombre)
+        return txt.format(self.paciente.nombre, self.nombre, self.fecha)
 
 
 class CirugiasPaciente(models.Model):
@@ -127,7 +127,7 @@ TIPO_AGENDA_CHOICES = [
 
 class Agenda(models.Model):
     paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, null=True, blank=True)
-    tipo = models.CharField(max_length=50, blank=True, null=True, choices=TIPO_AGENDA_CHOICES)
+    tipo = models.CharField(max_length=50, blank=True, null=True)
     procedimiento = models.CharField(max_length=200, blank=True, null=True)
     datos_ing = models.CharField(max_length=200, blank=True, null=True)
     fecha = models.DateField(null=True, blank=True)

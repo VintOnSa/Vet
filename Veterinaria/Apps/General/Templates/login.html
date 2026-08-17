@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+{% load static %}
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -35,12 +36,11 @@
         }
     </style>
 </head>
-<body class="flex min-h-screen items-center justify-center bg-navy-950 px-4">
+<body class="flex min-h-screen items-center justify-center bg-[#38223c] px-4">
     <div class="w-full max-w-sm">
         <div class="mb-6 flex flex-col items-center text-center">
-            <div class="mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-blue-500 text-xl font-black text-white">VM</div>
-            <p class="text-xs text-blue-300">Municipalidad de San Joaquín</p>
-            <h1 class="font-black text-white">Veterinaria Municipal</h1>
+            <img src="{% static 'img/logo_largo.png' %}" class="mb-4" style="width: 350px; height: 190px;">
+            <h1 class="text-2xl font-black text-white">Veterinaria Municipal</h1>
         </div>
 
         <div class="rounded-3xl bg-white p-7 shadow-2xl">
@@ -69,7 +69,31 @@
             </form>
         </div>
 
-        <p class="mt-5 text-center text-xs text-slate-500">Sistema de gestión veterinaria</p>
+        <p class="mt-5 text-center text-xs text-white">Sistema de gestión veterinaria</p>
     </div>
+    {% if messages %}
+        {% for message in messages %}
+            {% if message.tags == 'success' %}
+                <div id="messageToast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg z-[9999] transition-opacity duration-700 pointer-events-none" role="alert" aria-live="assertive" aria-atomic="true">
+            {% elif message.tags == 'error' %}
+                <div id="messageToast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg z-[9999] transition-opacity duration-700 pointer-events-none" role="alert" aria-live="assertive" aria-atomic="true">
+            {% endif %}
+                <p class="text-center">{{ message }}</p>
+            </div>
+        {% endfor %}
+    {% endif %}
+    <script>
+        const messageToast = document.getElementById('messageToast');
+        if (messageToast) {
+            setTimeout(() =>{
+                if(messageToast) messageToast.classList.add('opacity-0');
+            }, 1000);
+            if (messageToast){
+                messageToast.addEventListener('transitionend', () => {
+                    if(messageToast) messageToast.remove();
+                });
+            }
+        }
+    </script>
 </body>
 </html>

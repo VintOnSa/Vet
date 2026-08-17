@@ -307,6 +307,22 @@
             background: #fecaca;
         }
         
+        /* Estilos estado atencion */
+        .estado-success {
+            background-color: #d1fae5;
+            color: #047857;
+        }
+
+        .estado-pending {
+            background-color: #fef3c7;
+            color: #b45309; 
+        }
+
+        .estado-error {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+
         /* Calendario personalizado (Agendar atención) */
         .calendar-day {
             height: 2.5rem;
@@ -348,9 +364,9 @@
     <!-- ============================================================ -->
     <div class="flex min-h-screen">
         <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 flex w-72 -translate-x-full flex-col bg-navy-950 text-slate-300 shadow-2xl transition-transform lg:translate-x-0">
-            <div class="border-b border-white/10 p-5">
+            <div class="border-b border-white/10 p-4">
                 <div class="flex items-center gap-3">
-                    <div class="grid h-11 w-11 place-items-center rounded-2xl bg-blue-500 font-black text-white">VM</div>
+                    <img src="{% static 'img/logo.png' %}"  style="width: 70px; height: 70px;">
                     <div>
                         <p class="text-xs text-blue-300">Municipalidad de San Joaquín</p>
                         <h1 class="font-black text-white">Veterinaria Municipal</h1>
@@ -363,7 +379,7 @@
                 <button class="nav-item active w-full rounded-xl px-3 py-3 text-left text-sm" data-module="inicio">🏠 <span>Inicio</span></button>
                 <button class="nav-item w-full rounded-xl px-3 py-3 text-left text-sm" data-module="agenda">📅 <span>Agenda</span></button>
                 <button class="nav-item w-full rounded-xl px-3 py-3 text-left text-sm" data-module="pacientes">🐾 <span>Pacientes</span></button>
-                <p class="px-3 pb-2 pt-7 text-[10px] font-bold uppercase tracking-widest text-slate-500">Administración</p>
+                <p id="navAdminspan" class="px-3 pb-2 pt-7 text-[10px] font-bold uppercase tracking-widest text-slate-500">Administración</p>
                 <button id="navAdministracion" class="nav-item w-full rounded-xl px-3 py-3 text-left text-sm" data-module="administracion">⚙️ <span>Administración</span></button>
             </nav>
             <div class="relative border-t border-white/10 p-3">
@@ -453,15 +469,8 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="font-bold text-amber-900">Aviso de stock</h3>
-                                    <p class="text-sm text-amber-700">Productos que requieren atención.</p>
-                                </div>
-                                <button onclick="openAdminInventory()" class="text-sm font-semibold text-amber-800">Ver inventario →</button>
-                            </div>
-                            <div id="stockAlerts" class="mt-4 grid gap-2 md:grid-cols-2"></div>
+                        <div id="stockAlertscont">
+                            <div class="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm"></div>
                         </div>
                     </div>
                 </section>
@@ -636,11 +645,11 @@
                     <label>Tipo de agenda</label>
                     <select id="agendaTipo" name="tipo">
                         <option value="">Seleccionar</option>
-                        <option>Atención Médica</option>
-                        <option>Hospital</option>
-                        <option>Quirúrgica</option>
-                        <option>Terreno</option>
-                        <option>Tratamiento</option>
+                        <option value="Atención Medica" >Atención Médica</option>
+                        <option value="Hospital">Hospital</option>
+                        <option value="Quirúrgica">Quirúrgica</option>
+                        <option value="Terreno">Terreno</option>
+                        <option value="Tratamiento">Tratamiento</option>
                     </select>
                 </div>
                 <div>
@@ -780,7 +789,7 @@
                 </div>
                 <div>
                     <label>Género</label>
-                    <select name="genero">
+                    <select id="genero" name="genero">
                         <option value="">Seleccionar</option>
                         <option>Macho</option>
                         <option>Hembra</option>
@@ -802,10 +811,8 @@
                 </div>
                 <div>
                     <label>Estado reproductivo</label>
-                    <select name="estd_rep">
-                        <option value="">Seleccionar</option>
-                        <option>Castrado</option>
-                        <option>No castrado</option>
+                    <select id="estd_rep" name="estd_rep">
+                        <option value="">Debe Seleccionar Género</option>
                     </select>
                 </div>
                 <div>
@@ -1195,6 +1202,18 @@
 
     <!-- Toast -->
     <div id="toast" class="fixed bottom-5 right-5 z-[100]"></div>
+    
+    {% if messages %}
+        {% for message in messages %}
+            {% if message.tags == 'success' %}
+                <div id="messageToast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg z-[9999] transition-opacity duration-700 pointer-events-none" role="alert" aria-live="assertive" aria-atomic="true">
+            {% elif message.tags == 'error' %}
+                <div id="messageToast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg z-[9999] transition-opacity duration-700 pointer-events-none" role="alert" aria-live="assertive" aria-atomic="true">
+            {% endif %}
+                <p class="text-center">{{ message }}</p>
+            </div>
+        {% endfor %}
+    {% endif %}
 
     <!-- ============================================================ -->
     <!-- JAVASCRIPT COMPLETO -->
@@ -1239,6 +1258,18 @@
             el.innerHTML =
                 `<div class="rounded-2xl ${error ? 'bg-red-600' : 'bg-navy-800'} px-4 py-3 text-sm font-bold text-white shadow-xl">${esc(msg)}</div>`;
             setTimeout(() => el.innerHTML = '', 3000);
+        }
+
+        const messageToast = byId('messageToast');
+        if (messageToast) {
+            setTimeout(() =>{
+                if(messageToast) messageToast.classList.add('opacity-0');
+            }, 1000);
+            if (messageToast){
+                messageToast.addEventListener('transitionend', () => {
+                    if(messageToast) messageToast.remove();
+                });
+            }
         }
 
         // ============================================================
@@ -1683,13 +1714,14 @@ async function cargarDatos() {
         }
 
         function card(a) {
+            const colorEstado = a.estado === 'Atendida';
             return `<button onclick="detailAgenda(${a.id})" class="flex w-full items-center gap-4 rounded-2xl border p-4 text-left hover:bg-slate-50">
                 <div class="rounded-xl bg-blue-50 px-3 py-2 font-black text-navy-800">${esc(a.hora)}</div>
                 <div class="min-w-0 flex-1">
                     <b>${esc(a.paciente.nombre)}</b>
                     <small class="block text-slate-400">${esc(a.procedimiento)} · ${dateCL(a.fecha)}</small>
                 </div>
-                <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">${esc(a.estado)}</span>
+                <span class="rounded-full px-3 py-1 text-xs font-bold ${colorEstado ? 'estado-success' : 'estado-pending'}">${esc(a.estado)}</span>
             </button>`;
         }
 
@@ -1916,6 +1948,23 @@ async function cargarDatos() {
                 .filter(x => x.stock !== null && x.stock !== undefined && x.stock !== '' && !isNaN(Number(x.stock)) && Number(x.stock) <= 10)
                 .sort((a, b) => Number(a.stock) - Number(b.stock))
                 .slice(0, 4);
+            
+            const hayStock = low.length > 0;
+
+            const stockAlertCont = byId('stockAlertscont');
+            if (stockAlertCont){
+                stockAlertCont.innerHTML = 
+                `${hayStock ? `
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-amber-900">Aviso de stock</h3>
+                            <p class="text-sm text-amber-700">Productos que requieren atención.</p>
+                        </div>
+                        <button onclick="openAdminInventory()" class="text-sm font-semibold text-amber-800">Ver inventario →</button>
+                    </div>
+                    <div id="stockAlerts" class="mt-4 grid gap-2 md:grid-cols-2"></div>
+                `: ''}`;
+            }
 
             const alertsEl = byId('stockAlerts');
             if (alertsEl) {
@@ -1964,6 +2013,9 @@ async function cargarDatos() {
 
             const personalCard = byId('adminCardPersonal');
             if (personalCard) personalCard.classList.toggle('hidden', !gUserData.is_admin);
+
+            const navAdminspan = byId('navAdminspan');
+            if(navAdminspan) navAdminspan.classList.toggle('hidden', !gUserData.is_admin);
 
             const navAdmin = byId('navAdministracion');
             if (navAdmin) navAdmin.classList.toggle('hidden', !gUserData.is_admin);
@@ -2073,6 +2125,14 @@ async function cargarDatos() {
                 return;
             }
 
+            $.validator.addMethod("validarRutFormato", function(value, element) {
+                return /^[0-9]{7,8}-[0-9Kk]$/.test(value);
+            }, "El RUT debe ser ingresado sin puntos y con guión (Ej: 12345678-9).");
+
+            $.validator.addMethod("validarCorreo", function(value, element) {
+                return /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value);
+            }, "Ingrese un Correo válido.");
+
             if (validadorDueno) {
                 try { validadorDueno.destroy(); } catch(e) {}
                 validadorDueno = null;
@@ -2088,15 +2148,15 @@ async function cargarDatos() {
                 ignore: [],
                 rules: {
                     nombre: { required: true, minlength: 2, maxlength: 200 },
-                    rut: { required: true },
-                    correo: { email: true },
+                    rut: { required: true, validarRutFormato: true },
+                    correo: { email: true, validarCorreo: true },
                     telefono: { required: true, digits: true },
                     direccion: { required: true }
                 },
                 messages: {
                     nombre: { required: 'Debe ingresar el nombre.' },
-                    rut: { required: 'Debe ingresar el RUT.' },
-                    correo: { email: 'Correo inválido.' },
+                    rut: { required: 'Debe ingresar el RUT.', validarRutFormato: "El RUT debe ser ingresado sin puntos y con guión (Ej: 12345678-9)." },
+                    correo: { email: 'Correo inválido.', validarCorreo: "Ingrese un Correo válido." },
                     telefono: { required: 'Debe ingresar el teléfono.', digits: 'Solo números.' },
                     direccion: { required: 'Debe ingresar la dirección.' }
                 },
@@ -2546,6 +2606,7 @@ async function cargarDatos() {
                                         <b>${esc(a.procedimiento)}</b>
                                         <small class="block text-slate-400">${esc(a.datos_ing)}</small>
                                     </span>
+                                    <span class="rounded-full px-3 py-1 text-xs font-bold ${esc(a.estado) === 'Atendida' ? 'estado-success' : 'estado-pending'}">${esc(a.estado)}</span>
                                 </button>
                             `).join('') || '<p class="text-sm text-slate-400">Sin historial.</p>'}
                         </div>
@@ -2628,7 +2689,7 @@ async function cargarDatos() {
             if (!a) return;
 
             const hoy = iso(new Date());
-            const esPasada = a.fecha < hoy;
+            const esPasada = a.fecha < hoy || a.estado === 'Atendida';
             const puedeEditar = !esPasada || !!gUserData.is_admin;
             const tieneEdad = a.edad !== null && a.edad !== undefined && a.edad !== '';
 
@@ -3364,8 +3425,8 @@ async function cargarDatos() {
                 headers = ['Especie', 'Raza'];
                 rows = list.map(x => [species.find(s => String(s.id) === String(x.especie_id))?.nombre || '—', x.nombre]);
             } else if (type === 'personal') {
-                headers = ['RUT', 'Nombre', 'Cargo', 'Teléfono', 'Correo', 'Estado'];
-                rows = list.map(x => [x.rut, x.nombre, x.cargo, x.telefono, x.correo, x.activo === 'true' ? 'Activo' : 'Inactivo']);
+                headers = ['RUT', 'Nombre', 'Cargo', 'Teléfono', 'Correo', 'Direccion', 'Estado'];
+                rows = list.map(x => [x.rut, x.nombre, x.cargo, x.telefono, x.correo, x.direccion, x.activo === 'true' ? 'Activo' : 'Inactivo']);
             }
 
             return { title, headers, rows };
@@ -3528,9 +3589,13 @@ async function cargarDatos() {
                         esc(x.telefono),
                         esc(x.correo),
                         estado,
-                        `<button onclick="resetPassword(${x.id})" class="font-semibold text-amber-600">Reset clave</button>
-                            <button onclick="adminForm('personal',${x.id})" class="ml-3 font-semibold text-blue-700">Editar</button>
-                            <button onclick="removeItem('personal',${x.id})" class="ml-3 font-semibold text-red-600">Eliminar</button>`
+                        `
+                        <div class="flex flex-col items-start justify-start text-left">
+                            <button onclick="resetPassword(${x.id})" class="font-semibold text-amber-600 mb-2">Reset clave</button>
+                            <button onclick="adminForm('personal',${x.id})" class="font-semibold text-blue-700 mb-2">Editar</button>
+                            <button onclick="removeItem('personal',${x.id})" class="font-semibold text-red-600">Eliminar</button>
+                        </div>    
+                        `
                     ];
                 });
                 return simpleAdminTable(['RUT', 'Nombre', 'Cargo', 'Teléfono', 'Mail', 'Estado', 'Acciones'], data);
@@ -3542,7 +3607,7 @@ async function cargarDatos() {
         function simpleAdminTable(headers, rows) {
             return `<table class="min-w-full text-left text-sm">
                 <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                    <tr>${headers.map(h => `<th class="px-5 py-4">${h}</th>`).join('')}</tr>
+                    <tr>${headers.map(h => `<th class="px-4 py-4">${h}</th>`).join('')}</tr>
                 </thead>
                 <tbody>
                     ${rows.map(r => `<tr class="border-b border-slate-100 hover:bg-slate-50">${r.map(c => `<td class="px-5 py-4">${c}</td>`).join('')}</tr>`).join('') || emptyTable(headers.length, 'No hay registros para mostrar.')}
@@ -3599,7 +3664,7 @@ async function cargarDatos() {
                 fields = `
                     <div>
                         <label>RUT</label>
-                        <input name="rut" value="${esc(data?.rut || '')}">
+                        <input name="rut" value="${esc(data?.rut || '')}" placeholder="Ej: 12345678-9">
                     </div>
                     <div>
                         <label>Nombre</label>
@@ -3616,6 +3681,10 @@ async function cargarDatos() {
                     <div>
                         <label>Mail</label>
                         <input name="correo" type="email" value="${esc(data?.correo || '')}">
+                    </div>
+                    <div>
+                        <label>Direccion</label>
+                        <input name="direccion" value="${esc(data?.direccion || '')}">
                     </div>
                     <div>
                         <label>Usuario</label>
@@ -4178,7 +4247,7 @@ async function cargarDatos() {
                 },
                 submitHandler: function(form) {
                     console.log('FormAgendar validado, enviando...');
-                    enviarFormulario(form, '/crear-agenda/', 'Agenda creada correctamente.', null, function() {
+                    enviarFormulario(form, '/aControl/', 'Agenda creada correctamente.', null, function() {
                         resetAgendaForm();
                     });
                     return false;
@@ -4481,6 +4550,14 @@ async function cargarDatos() {
                 console.warn('jQuery Validate no está disponible');
                 return;
             }
+
+            $.validator.addMethod("validarRutFormato", function(value, element) {
+                return /^[0-9]{7,8}-[0-9Kk]$/.test(value);
+            }, "El RUT debe ser ingresado sin puntos y con guión (Ej: 12345678-9).");
+
+            $.validator.addMethod("validarCorreo", function(value, element) {
+                return /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value);
+            }, "Ingrese un Correo válido.");
             
             if (validadorUsuario) {
                 try { validadorUsuario.destroy(); } catch(e) {}
@@ -4497,15 +4574,15 @@ async function cargarDatos() {
                 ignore: [],
                 rules: {
                     nombre: { required: true, minlength: 3 },
-                    rut: { required: true },
-                    correo: { required: true, email: true },
+                    rut: { required: true, validarRutFormato: true },
+                    correo: { required: true, email: true, validarCorreo: true },
                     telefono: { required: true },
                     direccion: { required: true }
                 },
                 messages: {
                     nombre: { required: 'Debe ingresar el nombre.' },
-                    rut: { required: 'Debe ingresar el RUT.' },
-                    correo: { required: 'Debe ingresar el correo.', email: 'Correo inválido.' },
+                    rut: { required: 'Debe ingresar el RUT.', validarRutFormato: "El RUT debe ser ingresado sin puntos y con guión (Ej: 12345678-9)." },
+                    correo: { required: 'Debe ingresar el correo.', email: 'Correo inválido.', validarCorreo: "Ingrese un Correo válido." },
                     telefono: { required: 'Debe ingresar el teléfono.' },
                     direccion: { required: 'Debe ingresar la dirección.' }
                 },
@@ -4696,6 +4773,14 @@ async function cargarDatos() {
                 console.warn('jQuery Validate no está disponible');
                 return;
             }
+
+            $.validator.addMethod("validarRutFormato", function(value, element) {
+                return /^[0-9]{7,8}-[0-9Kk]$/.test(value);
+            }, "El RUT debe ser ingresado sin puntos y con guión (Ej: 12345678-9).");
+
+            $.validator.addMethod("validarCorreo", function(value, element) {
+                return /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value);
+            }, "Ingrese un Correo válido.");
             
             if (validadorAdminPersonal) {
                 try { validadorAdminPersonal.destroy(); } catch(e) {}
@@ -4711,18 +4796,20 @@ async function cargarDatos() {
             validadorAdminPersonal = $("#FormAdmin").validate({
                 ignore: [],
                 rules: {
-                    rut: { required: true },
+                    rut: { required: true, validarRutFormato: true },
                     nombre: { required: true, minlength: 3 },
                     cargo: { required: true },
                     telefono: { required: true },
-                    correo: { required: true, email: true }
+                    correo: { required: true, email: true, validarCorreo: true },
+                    direccion: { required: true }
                 },
                 messages: {
-                    rut: { required: 'Debe ingresar el RUT.' },
+                    rut: { required: 'Debe ingresar el RUT.', validarRutFormato: "El RUT debe ser ingresado sin puntos y con guión (Ej: 12345678-9)." },
                     nombre: { required: 'Debe ingresar el nombre.' },
                     cargo: { required: 'Debe ingresar el cargo.' },
                     telefono: { required: 'Debe ingresar el teléfono.' },
-                    correo: { required: 'Correo requerido.', email: 'Correo inválido.' }
+                    correo: { required: 'Correo requerido.', email: 'Correo inválido.', validarCorreo: "Ingrese un Correo válido." },
+                    direccion: { required: 'Debe ingresar una dirección' }
                 },
                 errorClass: 'text-red-600 text-sm mt-1',
                 errorElement: 'div',
@@ -5195,6 +5282,31 @@ async function cargarDatos() {
         // Buscadores de paciente
         patientSearch('agendaPatientSearch', 'agendaPatientResults', 'agendaPatientId', 'agendaPatientSelected');
         patientSearch('quickPatientSearch', 'quickPatientResults', 'quickPatientId', 'quickPatientSelected');
+
+        const generoPaciente = byId('genero');
+        if (generoPaciente){
+            generoPaciente.addEventListener('change', () =>{
+                const EstadoRep = byId('estd_rep');
+                if(EstadoRep){
+                    if(generoPaciente.value === 'Macho'){
+                        EstadoRep.innerHTML=
+                        `
+                            <option value="">Debe Seleccionar Género</option>
+                            <option>Castrado</option>
+                            <option>No Castrado</option>
+                        `
+                    } else if (generoPaciente.value === 'Hembra'){
+                            EstadoRep.innerHTML=
+                        `
+                            <option value="">Debe Seleccionar Género</option>
+                            <option>Esterilizada</option>
+                            <option>No Esterilizada</option>
+                        `
+                    }
+                }
+
+            })
+        }
 
         // ============================================================
         // 16. INICIO - con los eventos submit de los formularios

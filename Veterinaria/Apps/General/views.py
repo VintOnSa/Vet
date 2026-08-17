@@ -3,6 +3,7 @@ import re
 import unicodedata
 from django.shortcuts import render, redirect
 from Apps.General.models import *
+from django.contrib import messages
 from django.http import JsonResponse
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
@@ -36,8 +37,15 @@ def _slugify_ascii(s):
 
 def _generar_username(nombre_completo):
     partes = (nombre_completo or '').strip().split()
+
     primer_nombre = _slugify_ascii(partes[0]) if partes else 'usuario'
-    apellido = _slugify_ascii(' '.join(partes[1:])) if len(partes) > 1 else ''
+
+    if len(partes) >= 4:
+        apellido = _slugify_ascii(partes[2])
+    elif len(partes) >= 2:
+        apellido = _slugify_ascii(partes[1])
+    else:
+        apellido = ''
 
     if apellido:
         max_prefijo = len(primer_nombre) if primer_nombre else 1
@@ -57,6 +65,68 @@ def _generar_username(nombre_completo):
     return f"{base}{i}"
 
 
+def check_activeuser(request, usuario, vista):
+    try:
+        user = Personal.objects.get(usuario=usuario)
+        
+        if user.activo == "true":
+            if vista == 'login':
+                mensaje = f"Bienvenido {(User.objects.get(username=usuario)).first_name}"
+            estado = True
+        else:
+            mensaje = 'Usuario Inactivo, contactar con Administrador'
+            estado = False
+        
+        respuesta = {
+            'mensaje': mensaje if mensaje else '',
+            'estado': estado
+        }
+    except Personal.DoesNotExist:
+        respuesta = {
+            'mensaje': "Usuario no existe",
+            'estado': False
+        }
+    return respuesta
+
+
+def validar_rut_formato(value):
+    return bool(re.fullmatch(r"[0-9]{7,8}-[0-9Kk]", value))
+
+def validar_rut(rut: str) -> bool:
+    # Limpiar espacios y pasar K a mayúscula
+    rut = rut.strip().upper()
+
+    # Validar formato: 7 u 8 dígitos + guión + dígito verificador
+    import re
+
+    if not re.fullmatch(r"[0-9]{7,8}-[0-9K]", rut):
+        return False
+
+    numero, dv = rut.split("-")
+
+    # Calcular dígito verificador
+    suma = 0
+    multiplicador = 2
+
+    for digito in reversed(numero):
+        suma += int(digito) * multiplicador
+        multiplicador += 1
+
+        if multiplicador > 7:
+            multiplicador = 2
+
+    resto = suma % 11
+    resultado = 11 - resto
+
+    if resultado == 11:
+        dv_calculado = "0"
+    elif resultado == 10:
+        dv_calculado = "K"
+    else:
+        dv_calculado = str(resultado)
+
+    return dv == dv_calculado
+
 #===================================================================================================================================================
 # AUTENTICACIÓN
 #===================================================================================================================================================
@@ -71,9 +141,17 @@ def login_view(request):
         usuario = request.POST.get('usuario')
         password = request.POST.get('password')
         user = authenticate(request, username=usuario, password=password)
-        if user is not None:
+        if  user.is_staff:
             login(request, user)
             return redirect('/')
+        elif user is not None:
+            activo = check_activeuser(request, usuario, 'login')
+            if activo['estado'] == True:
+                login(request, user)
+                messages.success(request, activo['mensaje'])
+                return redirect('/')
+            else: 
+                error = activo['mensaje']
         else:
             error = 'Usuario o contraseña incorrectos.'
 
@@ -96,6 +174,15 @@ def logout_view(request):
 @require_GET
 def Inicio(request):
     user = request.user
+    
+    activo = check_activeuser(request, user.username, 'inicio')
+    if user.is_staff:
+        print(activo['estado'])
+    else:
+        if activo['estado'] == False:
+            messages.error(request, activo['mensaje'])
+            return redirect('/logout')
+    
     perfil = {}
     try:
         p = Personal.objects.get(correo = user.email)
@@ -400,7 +487,7 @@ def aControl(request):
     data = {}
     try:
         paciente = Paciente.objects.get(pk=int(request.POST.get('paciente')))
-        datos_ing = request.POST.get('datos_ing')
+        datos_ing = request.POST.get('datos_ing').capitalize()
         tipo = request.POST.get('tipo')
         fecha = request.POST.get('fecha')
         hora = request.POST.get('hora')
@@ -496,11 +583,15 @@ def eControl(request):
 def aDueno(request):
     data = {}
     try:
-        nombre = request.POST.get('nombre')
-        rut = request.POST.get('rut')
-        correo = request.POST.get('correo')
+        nombre = request.POST.get('nombre').title()
+
+        rut = request.POST.get('rut').upper()
+        if not validar_rut(rut):
+            return JsonResponse({"success": False,"error": "El RUT ingresado no es válido."}, status=400)
+        
+        correo = request.POST.get('correo').lower()
         telefono = request.POST.get('telefono')
-        direccion = request.POST.get('direccion')
+        direccion = request.POST.get('direccion').title()
 
         with transaction.atomic():
             dueno = Dueno.objects.create(
@@ -538,12 +629,16 @@ def eUsuario(request):
         personal = Personal.objects.get(correo=request.user.email)
         telefono = request.POST.get('telefono')
 
+        rut = request.POST.get('rut').upper()
+        if not validar_rut(rut):
+            return JsonResponse({"success": False,"error": "El RUT ingresado no es válido."}, status=400)
+
         with transaction.atomic():
-            personal.nombre = request.POST.get('nombre')
-            personal.rut = request.POST.get('rut')
-            personal.correo = request.POST.get('correo')
+            personal.nombre = request.POST.get('nombre').title()
+            personal.rut = rut
+            personal.correo = request.POST.get('correo').lower()
             personal.telefono = int(telefono) if telefono not in (None, '') else None
-            personal.direccion = request.POST.get('direccion')
+            personal.direccion = request.POST.get('direccion').title()
             personal.save()
 
         data = {
@@ -585,9 +680,9 @@ def aPaciente(request):
         with transaction.atomic():
             paciente = Paciente.objects.create(
                 nchip = int(nchip) if nchip not in (None, '') else None,
-                nombre = request.POST.get('nombre'),
+                nombre = request.POST.get('nombre').title(),
                 especie = request.POST.get('especie'),
-                raza = request.POST.get('raza'),
+                raza = request.POST.get('raza').title(),
                 genero = request.POST.get('genero'),
                 edad = int(edad) if edad not in (None, '') else None,
                 meses = int(meses) if meses not in (None, '') else None,
@@ -640,9 +735,9 @@ def ePaciente(request):
 
         with transaction.atomic():
             paciente.nchip = int(nchip) if nchip not in (None, '') else None
-            paciente.nombre = request.POST.get('nombre')
+            paciente.nombre = request.POST.get('nombre').title()
             paciente.especie = request.POST.get('especie')
-            paciente.raza = request.POST.get('raza')
+            paciente.raza = request.POST.get('raza').title()
             paciente.genero = request.POST.get('genero')
             paciente.edad = int(edad) if edad not in (None, '') else None
             paciente.meses = int(meses) if meses not in (None, '') else None
@@ -1002,7 +1097,7 @@ def aProcedimiento(request):
         precio = request.POST.get('precio')
         with transaction.atomic():
             proc = Procedimiento.objects.create(
-                nombre = request.POST.get('nombre'),
+                nombre = request.POST.get('nombre').title(),
                 precio = int(precio) if precio not in (None, '') else None
             )
         data = {'success': True, 'data': {'id': proc.pk, 'nombre': proc.nombre, 'precio': proc.precio}}
@@ -1020,7 +1115,7 @@ def eProcedimiento(request):
         proc = Procedimiento.objects.get(pk=int(request.POST.get('id')))
         precio = request.POST.get('precio')
         with transaction.atomic():
-            proc.nombre = request.POST.get('nombre')
+            proc.nombre = request.POST.get('nombre').title()
             proc.precio = int(precio) if precio not in (None, '') else None
             proc.save()
         data = {'success': True, 'data': {'id': proc.pk, 'nombre': proc.nombre, 'precio': proc.precio}}
@@ -1065,8 +1160,13 @@ def gEspecies(request):
 def aEspecie(request):
     data = {}
     try:
+        nombre = request.POST.get('nombre').title()
+        if Especie.objects.filter(nombre = nombre).exists():
+            data = {'success': False, 'error': "Especie ya existe en el sistema"}
+            return JsonResponse(data)
+        
         with transaction.atomic():
-            especie = Especie.objects.create(nombre=request.POST.get('nombre'))
+            especie = Especie.objects.create(nombre=nombre)
         data = {'success': True, 'data': {'id': especie.pk, 'nombre': especie.nombre}}
     except Exception as e:
         print(f"Error al guardar especie - Error: {e}")
@@ -1080,8 +1180,15 @@ def eEspecie(request):
     data = {}
     try:
         especie = Especie.objects.get(pk=int(request.POST.get('id')))
+
+        nombre = request.POST.get('nombre').title()
+        if nombre != especie.nombre:
+            if Especie.objects.filter(nombre = nombre).exists():
+                data = {'success': False, 'error': "Especie ya existe en el sistema"}
+                return JsonResponse(data)
+
         with transaction.atomic():
-            especie.nombre = request.POST.get('nombre')
+            especie.nombre = nombre
             especie.save()
         data = {'success': True, 'data': {'id': especie.pk, 'nombre': especie.nombre}}
     except Exception as e:
@@ -1125,8 +1232,13 @@ def aRaza(request):
     data = {}
     try:
         especie = Especie.objects.get(pk=int(request.POST.get('especie')))
+        nombre = request.POST.get('nombre').title()
+        if Raza.objects.filter(nombre = nombre).exists():
+            data = {'success': False, 'error': "Raza ya existe en el sistema"}
+            return JsonResponse(data)
+        
         with transaction.atomic():
-            raza = Raza.objects.create(especie=especie, nombre=request.POST.get('nombre'))
+            raza = Raza.objects.create(especie=especie, nombre=nombre)
         data = {'success': True, 'data': {'id': raza.pk, 'nombre': raza.nombre, 'especie_id': especie.pk}}
     except Exception as e:
         print(f"Error al guardar raza - Error: {e}")
@@ -1141,8 +1253,15 @@ def eRaza(request):
     try:
         raza = Raza.objects.get(pk=int(request.POST.get('id')))
         especie_id = request.POST.get('especie')
+
+        nombre = request.POST.get('nombre').title()
+        if nombre != raza.nombre:
+            if Raza.objects.filter(nombre = nombre).exists():
+                data = {'success': False, 'error': "Raza ya existe en el sistema"}
+                return JsonResponse(data)
+
         with transaction.atomic():
-            raza.nombre = request.POST.get('nombre')
+            raza.nombre = nombre
             if especie_id:
                 raza.especie = Especie.objects.get(pk=int(especie_id))
             raza.save()
@@ -1184,6 +1303,7 @@ def gPersonal(request):
                 'cargo': p.cargo,
                 'telefono': p.telefono,
                 'correo': p.correo,
+                'direccion': p.direccion,
                 'usuario': p.usuario,
                 'activo': p.activo
             }
@@ -1202,18 +1322,27 @@ def aPersonal(request):
     try:
         telefono = request.POST.get('telefono')
         nombre = request.POST.get('nombre')
-        correo = request.POST.get('correo')
+
+        rut = request.POST.get('rut').upper()
+        if not validar_rut(rut):
+            return JsonResponse({"success": False,"error": "El RUT ingresado no es válido."}, status=400)
+
+        correo = request.POST.get('correo').strip().lower()
+        if Personal.objects.filter(correo = correo).exists():
+            data = {'success': False, 'error': "Correo ya registrado"}
+            return JsonResponse(data)
         partes = (nombre or '').strip().split()
 
         cuenta_creada = False
         with transaction.atomic():
             username = _generar_username(nombre)
             personal = Personal.objects.create(
-                rut = request.POST.get('rut'),
-                nombre = nombre,
-                cargo = request.POST.get('cargo'),
+                rut = rut,
+                nombre = nombre.title(),
+                cargo = request.POST.get('cargo').title(),
                 telefono = int(telefono) if telefono not in (None, '') else None,
                 correo = correo,
+                direccion = request.POST.get('direccion').title(),
                 usuario = username,
                 activo = request.POST.get('activo') or 'true'
             )
@@ -1250,22 +1379,51 @@ def ePersonal(request):
     data = {}
     try:
         personal = Personal.objects.get(pk=int(request.POST.get('id')))
+        user = User.objects.get(email=personal.correo)
+
+
         telefono = request.POST.get('telefono')
+
+        rut = request.POST.get('rut').upper()
+        if not validar_rut(rut):
+            return JsonResponse({"success": False,"error": "El RUT ingresado no es válido."}, status=400)
+
+        correo = request.POST.get('correo').lower()
+        if correo != personal.correo:
+            if Personal.objects.filter(correo = correo).exists():
+                data = {'success': False, 'error': "Correo ya registrado"}
+                return JsonResponse(data)
+
+        nombre = request.POST.get('nombre')
+        partes = (nombre or '').strip().split()
+
+        usuario = request.POST.get('usuario')
+
         with transaction.atomic():
-            personal.rut = request.POST.get('rut')
-            personal.nombre = request.POST.get('nombre')
+            personal.rut = rut
+            personal.nombre = nombre
             personal.cargo = request.POST.get('cargo')
             personal.telefono = int(telefono) if telefono not in (None, '') else None
-            personal.correo = request.POST.get('correo')
-            personal.usuario = request.POST.get('usuario')
+            personal.direccion = request.POST.get('direccion').title()
+            personal.correo = correo
+            personal.usuario = usuario
             personal.activo = request.POST.get('activo') or 'true'
             personal.save()
+
+        
+
+            user.username = usuario,
+            user.email = correo,
+            user.first_name = partes[0] if partes else '',
+            user.last_name = ' '.join(partes[1:]) if len(partes) > 1 else ''
+            user.save()
+
         data = {
             'success': True,
             'data': {
                 'id': personal.pk, 'rut': personal.rut, 'nombre': personal.nombre,
                 'cargo': personal.cargo, 'telefono': personal.telefono,
-                'correo': personal.correo, 'usuario': personal.usuario, 'activo': personal.activo
+                'correo': personal.correo, 'direccion': personal.direccion, 'usuario': personal.usuario, 'activo': personal.activo
             }
         }
     except Exception as e:
