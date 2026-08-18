@@ -1,4 +1,6 @@
 from django.db import models
+from datetime import datetime, timedelta
+from django.utils import timezone
 
 # Create your models here.
 
@@ -126,8 +128,9 @@ TIPO_AGENDA_CHOICES = [
 
 
 class Agenda(models.Model):
+    origen = models.CharField(max_length=100, null=True, blank=True, default="Agenda")
     paciente = models.ForeignKey(Paciente, on_delete=models.CASCADE, null=True, blank=True)
-    tipo = models.CharField(max_length=50, blank=True, null=True)
+    tipo = models.CharField(max_length=50, blank=True, null=True, choices=TIPO_AGENDA_CHOICES)
     procedimiento = models.CharField(max_length=200, blank=True, null=True)
     datos_ing = models.CharField(max_length=200, blank=True, null=True)
     fecha = models.DateField(null=True, blank=True)
@@ -142,9 +145,46 @@ class Agenda(models.Model):
     veterinario = models.CharField(max_length=200, blank=True, null=True) 
     id_vet = models.ForeignKey(Personal, on_delete=models.SET_DEFAULT, default=1)
     estado = models.CharField(max_length=100, null=True, blank=True,default="Pendiente")
+    cancelado = models.CharField(max_length=200, null=True, blank=True)
 
     def __str__(self):
         txt = "ID: {0} - Mascota: {1} - Fecha: {2} - Hora: {3} - Estado: {4}"
         return txt.format(self.pk, self.paciente.nombre, self.fecha, self.hora, self.estado)
 
+    @property
+    def esta_expirado(self):
+        if self.origen == 'Ingreso':
+            return False
+        ahora = timezone.localtime(timezone.now())
+        limite = ahora - timedelta(hours=2)
 
+        fecha_hora = datetime.combine(
+            self.fecha,
+            self.hora
+        )
+
+        fecha_hora = timezone.make_aware(
+            fecha_hora,
+            timezone.get_current_timezone()
+        )
+
+        return fecha_hora < limite
+
+    def procesar_expiracion(self):
+        if self.estado == 'Pendiente' and self.esta_expirado:
+            self.estado = 'Cancelada'
+            self.cancelado = 'Cancelada por Expiración'
+            self.save()
+            return True
+        return False
+
+    @classmethod
+    def marcar_expirados(cls):
+        expiradas = cls.objects.filter(estado='Pendiente')
+
+        contador = 0
+        for agendas in expiradas:
+            agendas.procesar_expiracion()
+            contador += 1
+        
+        return contador

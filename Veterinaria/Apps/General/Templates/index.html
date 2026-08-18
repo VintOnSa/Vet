@@ -149,6 +149,19 @@
             background: #1f354a;
         }
 
+        .btnDanger {
+            border-radius: .75rem;
+            background: #dc2626;
+            color: #fff;
+            padding: .65rem 1rem;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .btnDanger:hover {
+            background: #b91c1c;
+        }
+
         .btnLight {
             border-radius: .75rem;
             border: 1px solid #e2e8f0;
@@ -441,8 +454,8 @@
                             <div class="xl:col-span-2">
                                 <div class="mb-3 flex items-center justify-between">
                                     <div>
-                                        <h3 class="font-bold text-slate-900">Últimas citas</h3>
-                                        <p class="text-sm text-slate-500">Atenciones más recientes de la jornada</p>
+                                        <h3 class="font-bold text-slate-900">Resumen</h3>
+                                        <p class="text-sm text-slate-500">Ultimas atenciones registradas en el sistema</p>
                                     </div>
                                     <button onclick="showModule('agenda')" class="text-sm font-semibold text-blue-600">Ver todas →</button>
                                 </div>
@@ -661,7 +674,7 @@
                 </div>
                 <div class="md:col-span-2">
                     <label>Dato de ingreso</label>
-                    <input name="datos_ing" maxlength="200" />
+                    <input name="datos_ing" maxlength="200" placeholder="Ej: Paciente ingresa con leve fiebre y dolor en ojo izquierdo."/>
                 </div>
                 <div>
                     <label>Fecha</label>
@@ -680,13 +693,6 @@
                     <input id="agendaVet" name="id_vet" type="hidden" />
                     <div id="agendaVetResults" class="results mt-2"></div>
                     <div id="agendaVetSelected" class="mt-2 hidden rounded-xl bg-blue-50 p-3 text-sm text-blue-700"></div>
-                </div>
-                <div>
-                    <label>Estado</label>
-                    <select name="estado">
-                        <option>Pendiente</option>
-                        <option>Confirmada</option>
-                    </select>
                 </div>
                 <div class="flex justify-end gap-2 md:col-span-2">
                     <button type="button" onclick="closeModal('modalAgenda')" class="btnLight">Cancelar</button>
@@ -734,7 +740,7 @@
                 </div>
                 <div>
                     <label>Dato de ingreso</label>
-                    <textarea name="datos_ing" rows="3"></textarea>
+                    <textarea name="datos_ing" rows="3" placeholder="Ej: Paciente ingresa con leve fiebre y dolor en ojo izquierdo."></textarea>
                 </div>
                 <div>
                     <label>Veterinario</label>
@@ -768,11 +774,11 @@
                 <input name="id" type="hidden" />
                 <div>
                     <label>N° Chip</label>
-                    <input name="nchip" type="number" />
+                    <input name="nchip" type="number" placeholder="Ej:00009923131299" />
                 </div>
                 <div>
                     <label>Nombre</label>
-                    <input name="nombre" />
+                    <input name="nombre" placeholder="Zuko"/>
                 </div>
                 <div>
                     <label>Especie</label>
@@ -798,21 +804,21 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label>Años</label>
-                        <input name="edad" type="number" min="0" />
+                        <input name="edad" type="number" min="0" placeholder="7"/>
                     </div>
                     <div>
                         <label>Meses</label>
-                        <input name="meses" type="number" min="0" max="11" />
+                        <input name="meses" type="number" min="0" max="11" placeholder="Ej: 2" />
                     </div>
                 </div>
                 <div>
                     <label>Peso</label>
-                    <input name="peso" />
+                    <input name="peso" placeholder="Ej: 12.5"/>
                 </div>
                 <div>
                     <label>Estado reproductivo</label>
                     <select id="estd_rep" name="estd_rep">
-                        <option value="">Debe Seleccionar Género</option>
+                        <option value="">Debe seleccionar género</option>
                     </select>
                 </div>
                 <div>
@@ -822,6 +828,7 @@
                         <option>Sí</option>
                         <option>No</option>
                     </select>
+                    <p class="text-sm italic font-bold mt-1 p-1">*Paciente tiene una marca por procedimientos pasados</p>
                 </div>
                 <div>
                     <label>Dueño</label>
@@ -834,10 +841,7 @@
                 <!-- ===== VACUNAS con buscador tipo "dueño" ===== -->
                 <div class="md:col-span-2">
                     <label>Vacunas</label>
-                    <div class="flex gap-2">
-                        <input id="vaccineSearch" placeholder="Buscar vacuna por nombre..." class="flex-1 rounded-xl border px-4 py-2" />
-                        <button type="button" onclick="agregarVacunaSeleccionada()" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">+</button>
-                    </div>
+                    <input id="vaccineSearch" placeholder="Buscar vacuna por nombre..." class="flex-1 rounded-xl border px-4 py-2" />
                     <div id="vaccineResults" class="results mt-2 hidden"></div>
                     <div id="vaccineTags" class="mt-3 flex flex-wrap gap-2"></div>
                     <input type="hidden" name="vacunas" id="vacunasHidden" value="" />
@@ -933,6 +937,35 @@
     <!-- Modal: Agendas del día -->
     <div id="modalDayAgenda" class="modal" style="z-index:65">
         <div id="dayAgendaContent" class="modalBox max-w-3xl"></div>
+    </div>
+
+    <!-- Modal: Cancelar Agenda-->
+    <div id="cancelModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-[100] px-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <!-- Título -->
+            <h3 id="cancelModalTitle" class="text-lg font-semibold text-slate-800 text-center">Cancelar Agenda</h3>
+            <!-- Select -->
+            <div class="mt-5">
+                <form id="cancelForm" onsubmit="return false;">
+                    <label for="cancelReason" class="block text-sm font-medium text-slate-700 mb-2">Motivo de cancelación</label>
+                    <select id="cancelReason" name="cancelReason" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                        <option value="" selected disabled>Selecciona un motivo</option>
+                        <option value="Cancelada por el usuario">Cancelada por el usuario</option>
+                        <option value="Cancelada por el veterinario">Cancelada por el veterinario</option>
+                        <option value="Cancelada por otro motivo">Otro motivo</option>
+                    </select>
+                </form>
+            </div>
+            <!-- Botones -->
+            <div class="flex gap-3 mt-6">
+                <button id="btnCancelModal" onclick="closeCancelAttentionModal()" class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition-colors">
+                    Cancelar
+                </button>
+                <button id="btnConfirmCancel" class="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors">
+                    Confirmar
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Modal: Admin Form -->
@@ -1200,8 +1233,59 @@
         </div>
     </div>
 
+
+    <!-- ========================================================= -->
+    <!-- MODAL CONFIRMAR ELIMINACIÓN -->
+    <!-- ========================================================= -->
+
+    <div id="deleteModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-[999] px-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="p-6">
+                <div class="flex items-start gap-4">
+                    <div class="flex-1">
+                        <h3 id="delModalTitle" class="text-lg font-semibold text-slate-800">Eliminar Elemento</h3>
+                        <p class="text-sm text-slate-500 mt-1">Esta acción eliminará el registro de forma permanente.</p>
+                    </div>
+                </div>
+                <div id="deleteElementInfo" class="mt-5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700"></div>
+                <div class="flex items-center gap-2 mt-4 text-xs text-red-600">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span>Esta acción no se puede deshacer.</span>
+                </div>
+                <div class="flex gap-3 mt-6">
+                    <button onclick="cancelDelete()" class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition-colors">
+                        Cancelar
+                    </button>
+
+                    <button id="btnConfirmDelete" class="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors">
+                        <i class="fa-solid fa-trash mr-2"></i>
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="logoutModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50 px-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h3 class="text-lg font-semibold text-slate-800 text-center">Cerrar Sesión</h3>
+            <p class="text-sm text-slate-500 text-center mt-2">
+                ¿Estás seguro de que deseas cerrar sesión?
+            </p>
+            <div class="flex gap-3 mt-6">
+                <button id="btnCancelLogout" class="flex-1 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition-colors">
+                    Cancelar
+                </button>
+
+                <button id="btnConfirmLogout" class="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
-    <div id="toast" class="fixed bottom-5 right-5 z-[100]"></div>
+    <div id="toast" class="fixed bottom-5 right-5 z-[9999]"></div>
     
     {% if messages %}
         {% for message in messages %}
@@ -1303,6 +1387,7 @@
                 if (sec.heading) {
                     doc.setFontSize(11);
                     doc.text(sec.heading, 14, y);
+                    doc.setTextColor(0);
                     y += 3;
                 }
                 doc.autoTable({
@@ -1391,6 +1476,8 @@
         // ============================================================
         let patients = [];
         let appointments = [];
+        let DashboardAppointments = [];
+        let VetAppointments = [];
         let owners = [];
         let veterinarians = [];
         let procedures = [];
@@ -1413,32 +1500,6 @@
         let calendarDate = new Date();
         let selectedDay = null;
 
-        // Datos de prueba
-        const demoOwners = [
-            { id: 1, name: 'Juan Pérez', rut: '12.345.678-9', phone: '912345678', address: 'San Joaquín' },
-            { id: 2, name: 'María Soto', rut: '15.456.789-0', phone: '987654321', address: 'La Florida' }
-        ];
-
-        const demoVets = [
-            { id: 1, nombre: 'Juanito Perez', rut: '12.345.678-9', correo: 'juanito@municipalidad.cl',
-            telefono: '912345678' },
-            { id: 2, nombre: 'Dra. María González', rut: '14.222.333-4', correo: 'maria@municipalidad.cl',
-                telefono: '923456789' }
-        ];
-
-        const demoSpecies = [
-            { id: 1, nombre: 'Perro' },
-            { id: 2, nombre: 'Gato' },
-            { id: 3, nombre: 'Ave' }
-        ];
-
-        const demoBreeds = [
-            { id: 1, especie_id: 1, nombre: 'Labrador' },
-            { id: 2, especie_id: 1, nombre: 'Poodle' },
-            { id: 3, especie_id: 1, nombre: 'Mestizo' },
-            { id: 4, especie_id: 2, nombre: 'Siamés' },
-            { id: 5, especie_id: 2, nombre: 'Persa' }
-        ];
 
         const demoProcedures = [
             { id: 1, nombre: 'Consulta general', precio: 5000 },
@@ -1447,33 +1508,6 @@
             { id: 4, nombre: 'Curación', precio: 4000 }
         ];
 
-        const demoInventory = [
-            { id: 1, codigo: 'INS-001', nombre: 'Jeringa 5 ml', tipo: 'insumo', unidad: 'Unidad', stock: 120, precio: 500,
-                descuento: 0 },
-            { id: 2, codigo: 'INS-002', nombre: 'Alcohol', tipo: 'insumo', unidad: 'ML', stock: 350, precio: 2000,
-                descuento: 10 },
-            { id: 3, codigo: 'VAC-001', nombre: 'Antirrábica', tipo: 'vacuna', unidad: 'Unidad', stock: 25, precio: 4500,
-                descuento: 0 }
-        ];
-
-        const demoVaccines = [
-            { id: 1, nombre: 'Antirrábica' },
-            { id: 2, nombre: 'Séxtuple' },
-            { id: 3, nombre: 'Triple felina' },
-            { id: 4, nombre: 'Leucemia felina' }
-        ];
-
-        const demoWarehouses = [
-            { id: 1, nombre: 'Bodega Principal' },
-            { id: 2, nombre: 'Bodega Vacunas' }
-        ];
-
-        const demoStaff = [
-            { id: 1, rut: '12.345.678-9', nombre: 'Juanito Perez', cargo: 'Veterinario', telefono: '912345678',
-                correo: 'juanito@municipalidad.cl', usuario: 'jperez', activo: 'true' },
-            { id: 2, rut: '14.222.333-4', nombre: 'María González', cargo: 'Veterinaria', telefono: '923456789',
-                correo: 'maria@municipalidad.cl', usuario: 'mgonzalez', activo: 'true' }
-        ];
 
         const p1 = {
             id: 1,
@@ -1487,7 +1521,7 @@
             peso: '18.5',
             marca: 'No',
             estd_rep: 'Castrado',
-            dueno: demoOwners[0],
+            dueno: 'demoOwners[0]',
             vacunas: [1, 2]
         };
         const p2 = {
@@ -1502,7 +1536,7 @@
             peso: '4.2',
             marca: 'Sí',
             estd_rep: 'No castrado',
-            dueno: demoOwners[1],
+            dueno: 'demoOwners[1]',
             vacunas: [3]
         };
         const p3 = {
@@ -1517,59 +1551,12 @@
             peso: '23',
             marca: 'No',
             estd_rep: 'Castrado',
-            dueno: demoOwners[0],
+            dueno: 'demoOwners[0]',
             vacunas: []
         };
-        const demoPatients = [p1, p2, p3];
 
         const today = new Date().toISOString().slice(0, 10);
-        const demoAppointments = [{
-            id: 101,
-            paciente: p1,
-            procedimiento: 'Consulta general',
-            datos_ing: 'Control preventivo',
-            fecha: today,
-            hora: '09:00',
-            costo: 5000,
-            id_vet: 1,
-            veterinario: 'Juanito Perez',
-            estado: 'Pendiente',
-            peso: '',
-            edad: '',
-            diagnostico: '',
-            observaciones: ''
-        }, {
-            id: 102,
-            paciente: p2,
-            procedimiento: 'Vacunación',
-            datos_ing: 'Vacuna triple felina',
-            fecha: today,
-            hora: '10:30',
-            costo: 3000,
-            id_vet: 2,
-            veterinario: 'Dra. María González',
-            estado: 'Confirmada',
-            peso: '',
-            edad: '',
-            diagnostico: '',
-            observaciones: ''
-        }, {
-            id: 103,
-            paciente: p3,
-            procedimiento: 'Curación',
-            datos_ing: 'Revisión de herida',
-            fecha: today,
-            hora: '12:00',
-            costo: 4000,
-            id_vet: 1,
-            veterinario: 'Juanito Perez',
-            estado: 'Pendiente',
-            peso: '',
-            edad: '',
-            diagnostico: '',
-            observaciones: ''
-        }];
-
+       
         const demoHours = Array.from({ length: 19 }, (_, i) => ({
             id: i + 1,
             hora: `${String(8 + Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`
@@ -1593,7 +1580,7 @@ let dashStats = null;
 
 async function cargarDatos() {
             try {
-                const [pa,ap,ow,ve,pr,i,wa,sp,br,st,ho,va,ds] = await Promise.all([
+                const [pa,ap,ow,ve,pr,i,wa,sp,br,st,va,ds] = await Promise.all([
                     fetch('/gPacientes/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
                     fetch('/gAgenda/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
                     fetch('/gOwner/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
@@ -1604,23 +1591,22 @@ async function cargarDatos() {
                     fetch('/gEspecies/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
                     fetch('/gRazas/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
                     fetch('/gPersonal/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
-                    fetch('/gHoras/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
                     fetch('/gVacunas/').then(r => r.ok ? r.json() : {}).catch(() => ({})),
                     fetch('/gDatosDash/').then(r => r.ok ? r.json() : null).catch(() => null),
                 ]);
 
-                patients = pa.pacientes || demoPatients || [];
-                appointments = ap.agendas || demoAppointments || [];
-                owners = ow.duenos || demoOwners || [];
-                veterinarians = ve.veterinarios || demoVets || [];
+                patients = pa.pacientes || [];
+                appointments = ap.agendas  || [];
+                owners = ow.duenos || [];
+                veterinarians = ve.veterinarios || [];
                 procedures = pr.procedimientos || demoProcedures || [];
-                inventory = i.productos || demoInventory || [];
-                warehouses = wa.bodegas || demoWarehouses || [];
-                species = sp.especies || demoSpecies || [];
-                breeds = br.razas || demoBreeds || [];
-                staff = st.personal || demoStaff || [];
-                hours = ho.horas || demoHours || [];
-                vaccines = va.vacunas || demoVaccines || [];
+                inventory = i.productos || [];
+                warehouses = wa.bodegas || [];
+                species = sp.especies || [];
+                breeds = br.razas || [];
+                staff = st.personal || [];
+                hours = demoHours || [];
+                vaccines = va.vacunas || [];
                 dashStats = (ds && !ds.error) ? ds : null;
 
                 normalize();
@@ -1639,12 +1625,37 @@ async function cargarDatos() {
                 dueno: typeof p.dueno === 'object' ? p.dueno : owners.find(o => String(o.id) === String(p.dueno)),
                 vacunas: p.vacunas || []
             }));
+            
+            const hoy = iso(new Date());
+            const fecha = new Date();
+            const fechafiltro = new Date(fecha);
+            fechafiltro.setDate(fechafiltro.getDate() + 5);
+            const filtro = fechafiltro.toISOString();
+            
+            /*const horaActual = `${String(fecha.getHours()).padStart(2, '0')}:${String(fecha.getMinutes()).padStart(2, '0')}`;*/
+
+            DashboardAppointments = appointments.filter(a => (a.fecha || '') >= hoy && a.fecha < filtro && (!gUserData.is_admin ? String(a.id_vet) === String(gUserData.id) : appointments));
+            DashboardAppointments = DashboardAppointments.map(a => ({
+                ...a,
+                id: a.id ?? a.pk,
+                paciente: typeof a.paciente === 'object' ? a.paciente : patients.find(p => String(p.id) === String(a.paciente)) || {},
+                costo: Number(a.costo || 0),
+                estado: a.estado || 'Pendiente'
+            }));
+
+            VetAppointments = appointments.filter(a => !gUserData.is_admin ? String(a.id_vet) === String(gUserData.id) : appointments);
+            VetAppointments = VetAppointments.map(a => ({
+                ...a,
+                id: a.id ?? a.pk,
+                paciente: typeof a.paciente === 'object' ? a.paciente : patients.find(p => String(p.id) === String(a.paciente)) || {},
+                costo: Number(a.costo || 0),
+                estado: a.estado || 'Pendiente'
+            }));
 
             appointments = appointments.map(a => ({
                 ...a,
                 id: a.id ?? a.pk,
-                paciente: typeof a.paciente === 'object' ? a.paciente : patients.find(p => String(p.id) === String(a
-                .paciente)) || {},
+                paciente: typeof a.paciente === 'object' ? a.paciente : patients.find(p => String(p.id) === String(a.paciente)) || {},
                 costo: Number(a.costo || 0),
                 estado: a.estado || 'Pendiente'
             }));
@@ -1714,19 +1725,18 @@ async function cargarDatos() {
         }
 
         function card(a) {
-            const colorEstado = a.estado === 'Atendida';
             return `<button onclick="detailAgenda(${a.id})" class="flex w-full items-center gap-4 rounded-2xl border p-4 text-left hover:bg-slate-50">
                 <div class="rounded-xl bg-blue-50 px-3 py-2 font-black text-navy-800">${esc(a.hora)}</div>
                 <div class="min-w-0 flex-1">
                     <b>${esc(a.paciente.nombre)}</b>
                     <small class="block text-slate-400">${esc(a.procedimiento)} · ${dateCL(a.fecha)}</small>
                 </div>
-                <span class="rounded-full px-3 py-1 text-xs font-bold ${colorEstado ? 'estado-success' : 'estado-pending'}">${esc(a.estado)}</span>
+                <span class="rounded-full px-3 py-1 text-xs font-bold ${esc(a.estado) === 'Atendida' ? 'estado-success' : esc(a.estado) === 'Cancelada' ? 'estado-error' : 'estado-pending'}">${esc(a.estado)}</span>
             </button>`;
         }
 
         function renderDashboard() {
-            let list = [...appointments].sort((a, b) =>
+            let list = [...DashboardAppointments].sort((a, b) =>
                 `${a.fecha}${a.hora}`.localeCompare(`${b.fecha}${b.hora}`)
             ).slice(0, 5);
             const el = byId('dashboardAgenda');
@@ -1755,7 +1765,7 @@ async function cargarDatos() {
 
             for (let d = 1; d <= last; d++) {
                 let date = iso(new Date(y, m, d));
-                let a = (appointments || []).filter(x => x.fecha === date);
+                let a = (VetAppointments || []).filter(x => x.fecha === date);
                 let tod = date === iso(new Date());
 
                 html += `<button onclick="selectDay('${date}')" 
@@ -1776,14 +1786,14 @@ async function cargarDatos() {
             selectedDay = d;
             const agendaSubtitle = byId('agendaSubtitle');
             if (agendaSubtitle) {
-                agendaSubtitle.textContent = `${dateCL(d)} · ${appointments.filter(a => a.fecha === d).length} agenda(s)`;
+                agendaSubtitle.textContent = `${dateCL(d)} · ${VetAppointments.filter(a => a.fecha === d).length} agenda(s)`;
             }
             renderAgenda();
             openDayAgendaModal(d);
         }
 
         function openDayAgendaModal(d) {
-            let list = appointments.filter(a => a.fecha === d).sort((a, b) => String(a.hora).localeCompare(String(b.hora)));
+            let list = VetAppointments.filter(a => a.fecha === d).sort((a, b) => String(a.hora).localeCompare(String(b.hora)));
 
             const content = byId('dayAgendaContent');
             if (content) {
@@ -1829,7 +1839,7 @@ async function cargarDatos() {
                             <b class="text-xl text-navy-800">${esc(a.hora)}</b>
                             <small class="block text-slate-400">${dateCL(a.fecha)}</small>
                         </span>
-                        <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">${esc(a.estado)}</span>
+                        <span class="rounded-full px-3 py-1 text-xs font-bold ${esc(a.estado) === 'Atendida' ? 'estado-success' : esc(a.estado) === 'Cancelada' ? 'estado-error' : 'estado-pending'}">${esc(a.estado)}</span>
                     </button>`
                 ).join('') || '<p class="rounded-2xl bg-slate-50 p-6 text-center text-sm text-slate-400">Sin resultados.</p>';
             }
@@ -2150,14 +2160,14 @@ async function cargarDatos() {
                     nombre: { required: true, minlength: 2, maxlength: 200 },
                     rut: { required: true, validarRutFormato: true },
                     correo: { email: true, validarCorreo: true },
-                    telefono: { required: true, digits: true },
+                    telefono: { required: true, digits: true, maxlength: 9 },
                     direccion: { required: true }
                 },
                 messages: {
                     nombre: { required: 'Debe ingresar el nombre.' },
                     rut: { required: 'Debe ingresar el RUT.', validarRutFormato: "El RUT debe ser ingresado sin puntos y con guión (Ej: 12345678-9)." },
                     correo: { email: 'Correo inválido.', validarCorreo: "Ingrese un Correo válido." },
-                    telefono: { required: 'Debe ingresar el teléfono.', digits: 'Solo números.' },
+                    telefono: { required: 'Debe ingresar el teléfono.', digits: 'Solo números.', maxlength: 'Máximo 9 digitos' },
                     direccion: { required: 'Debe ingresar la dirección.' }
                 },
                 errorClass: 'text-red-600 text-sm mt-1',
@@ -2606,7 +2616,7 @@ async function cargarDatos() {
                                         <b>${esc(a.procedimiento)}</b>
                                         <small class="block text-slate-400">${esc(a.datos_ing)}</small>
                                     </span>
-                                    <span class="rounded-full px-3 py-1 text-xs font-bold ${esc(a.estado) === 'Atendida' ? 'estado-success' : 'estado-pending'}">${esc(a.estado)}</span>
+                                    <span class="rounded-full px-3 py-1 text-xs font-bold ${esc(a.estado) === 'Atendida' ? 'estado-success' : esc(a.estado) === 'Cancelada' ? 'estado-error' : 'estado-pending'}">${esc(a.estado)}</span>
                                 </button>
                             `).join('') || '<p class="text-sm text-slate-400">Sin historial.</p>'}
                         </div>
@@ -2690,7 +2700,9 @@ async function cargarDatos() {
 
             const hoy = iso(new Date());
             const esPasada = a.fecha < hoy || a.estado === 'Atendida';
-            const puedeEditar = !esPasada || !!gUserData.is_admin;
+            const fueCancelada = a.estado === 'Cancelada';
+            const puedeEditar = (!esPasada || !!gUserData.is_admin) && !fueCancelada;
+            const puedeEliminar = !esPasada && (a.estado !== 'Atendida' || a.estado !== 'Cancelada') && !!gUserData.is_admin;
             const tieneEdad = a.edad !== null && a.edad !== undefined && a.edad !== '';
 
             const detailEl = byId('agendaDetail');
@@ -2735,6 +2747,7 @@ async function cargarDatos() {
                     </div>
                     ${esPasada ? `<div class="mx-6 mb-4 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500">📌 Esta atención ya ocurrió${puedeEditar ? '' : ' y solo puede ser editada por administración.'}</div>` : ''}
                     <div class="flex justify-end gap-2 border-t p-6">
+                        ${puedeEliminar ? `<button onclick="cancelAttention(${a.id})" class="btnDanger">❌ Cancelar agenda</button>` : ''}
                         ${puedeEditar ? `<button onclick="startAttention(${a.id})" class="btnPrimary">🩺 ${esPasada ? 'Editar atención' : 'Iniciar atención'}</button>` : ''}
                         <button onclick="closeModal('modalAgendaDetail')" class="btnLight">Cerrar</button>
                     </div>
@@ -2922,6 +2935,109 @@ async function cargarDatos() {
             resetQuickForm();
             openModal('modalQuick');
             setTimeout(iniciarValidacionIngresoRapido, 100);
+        }
+
+
+        let cancelId = null;
+
+        function cancelAttention(id, confirmed = false){
+            const cancelModal = byId('cancelModal');
+            const btnConfirmCancel = byId('btnConfirmCancel');
+
+            if (!confirmed){
+                cancelId = id;
+                
+                cancelModal.classList.add('flex');
+                cancelModal.classList.remove('hidden');
+                btnConfirmCancel.onclick = function (){
+                    cancelAttention(id, true);
+                }
+
+                return;
+            }
+
+            setTimeout(iniciarValidacionCancelacion, 100);
+
+            const fd = new FormData();
+            fd.append('id', cancelId);
+            fetch('/cControl/', {
+                method: 'POST',
+                body: fd,
+                headers: { 'X-CSRFToken': getCookie('csrftoken') }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    toast('Agenda cancelada.', false);
+                    cargarDatos();
+                    cancelId = null;
+
+                    cancelModal.classList.add('hidden');
+                    cancelModal.classList.remove('flex');
+                } else {
+                    toast(data.error || 'Error al cancelar agenda', true);
+                }
+            })
+            .catch(() => toast('Error de conexión', true));
+        }
+
+        var validadorCancelacion = null;
+
+        function iniciarValidacionCancelacion() {
+            const f = byId('cancelForm');
+            if (!f) {
+                console.warn('Select no encontrado');
+                return;
+            }
+
+            if (typeof $ === 'undefined' || !$.fn || !$.fn.validate) {
+                console.warn('jQuery Validate no está disponible');
+                return;
+            }
+
+            if (validadorCancelacion) {
+                try { validadorCancelacion.destroy(); } catch(e) {}
+                validadorCancelacion = null;
+            }
+
+            try {
+                $("#cancelForm").find('.error').removeClass('error');
+                $("#cancelForm").find('.border-red-600').removeClass('border-red-600');
+                $("#cancelForm").find('label.error').remove();
+            } catch(e) {}
+
+            validadorCancelacion = $("#cancelForm").validate({
+                ignore: [],
+                rules: {
+                    cancelReason: { required: true},
+                },
+                messages: {
+                    cancelReason: { required: 'Debe seleccionar el motivo de cancelación.'},
+                },
+                errorClass: 'text-red-600 text-sm mt-1',
+                errorElement: 'div',
+                highlight: el => $(el).addClass('border-red-600'),
+                unhighlight: el => $(el).removeClass('border-red-600'),
+                errorPlacement: function(error, element) {
+                    error.insertAfter(element);
+                },
+                submitHandler: function(form) {
+                    return false;
+                }
+            });
+
+            try {
+                validadorCancelacion.resetForm();
+            } catch(e) {}
+        }
+
+        function closeCancelAttentionModal(){
+            const cancelModal = byId('cancelModal');
+            
+            cancelModal.classList.add('hidden');
+            cancelModal.classList.remove('flex');
+            
+            cancelId = null;
         }
 
         // ============================================================
@@ -3833,8 +3949,42 @@ async function cargarDatos() {
             } catch(e) {}
         }
 
-        function removeItem(type, id) {
-            if (!confirm('¿Eliminar este registro?')) return;
+        let deleteType = null;
+        let deleteId = null;
+
+        function removeItem(type, id, confirmed = false) {
+
+            const modal = byId('deleteModal');
+            const mTitle = byId('delModalTitle');
+            const eInfo = byId('deleteElementInfo');
+            const btnConfirm = byId('btnConfirmDelete');
+
+            const tipo = {
+                producto: 'Insumo',
+                bodega: 'Bodega',
+                procedimiento: 'Procedimiento',
+                especie: 'Especie',
+                raza: 'Raza',
+                personal: 'Personal'
+            };
+
+            if (!confirmed) {
+
+                deleteType = type;
+                deleteId = id;
+                
+                mTitle.textContent = `Eliminar ${tipo[deleteType]}`;
+                eInfo.innerHTML = `¿Estás seguro de que deseas eliminar este registro?`;
+                btnConfirm.onclick = function () {
+                    removeItem(type, id, true);
+                };
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+                return;
+            }
+
             const urls = {
                 producto: '/delInsumo/',
                 bodega: '/delBodega/',
@@ -3843,10 +3993,28 @@ async function cargarDatos() {
                 raza: '/delRaza/',
                 personal: '/delPersonal/'
             };
-            if (!urls[type]) return;
-            enviarFormulario(null, urls[type], 'Registro eliminado.', { id: id });
-        }
 
+            if (!urls[deleteType]) return;
+
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+
+            enviarFormulario(null, urls[deleteType], 'Registro eliminado.', { id: deleteId });
+
+            deleteType = null;
+            deleteId = null;
+        }
+        
+        function cancelDelete() {
+            const modal = byId('deleteModal');
+            
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+
+            deleteNombre = null;
+            deleteType = null;
+            deleteId = null;
+        }
         // ============================================================
         // 11. ESPECIES - CRUD con modal
         // ============================================================
@@ -3911,10 +4079,33 @@ async function cargarDatos() {
             setTimeout(() => abrirFormEspecie(id), 300);
         }
 
-        function eliminarEspecie(id, nombre) {
-            if (!confirm(`¿Estás seguro de eliminar la especie "${nombre}"?`)) return;
+        let deleteNombre = null;
+        
+        function eliminarEspecie(id, nombre, confirmed = false) {
+            const modal = byId('deleteModal');
+            const mTitle = byId('delModalTitle');
+            const eInfo = byId('deleteElementInfo');
+            const btnConfirm = byId('btnConfirmDelete');
+
+            if (!confirmed) {
+
+                deleteNombre = nombre
+                deleteId = id;
+
+                mTitle.textContent = 'Eliminar Especie'; 
+                eInfo.innerHTML = `¿Estás seguro de eliminar la especie "${deleteNombre}"?`;
+                btnConfirm.onclick = function () {
+                    eliminarEspecie(id, nombre, true);
+                };
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+                return;
+            }
+
             const fd = new FormData();
-            fd.append('id', id);
+            fd.append('id', deleteId);
             fetch('/delEspecie/', {
                 method: 'POST',
                 body: fd,
@@ -3924,10 +4115,16 @@ async function cargarDatos() {
             .then(data => {
                 if (data.success) {
                     toast('Especie eliminada.', false);
-                    species = species.filter(s => String(s.id) !== String(id));
-                    breeds = breeds.filter(b => String(b.especie_id) !== String(id));
+                    species = species.filter(s => String(s.id) !== String(deleteId));
+                    breeds = breeds.filter(b => String(b.especie_id) !== String(deleteId));
                     renderEspeciesList();
                     fillSelects();
+
+                    deleteNombre = null;
+                    deleteId = null;
+
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
                 } else {
                     toast(data.error || 'Error al eliminar especie', true);
                 }
@@ -4253,6 +4450,24 @@ async function cargarDatos() {
                     return false;
                 }
             });
+            $("#agendaCalendar").on("click", function () {
+                validadorAgendar.element("#agendaDate");
+            });
+            $("#agendaPatientSearch").on("blur", function () {
+                $("#agendaPatientResults").on("click", function () {
+                    validadorAgendar.element("#agendaPatientId");
+                })
+            });
+            $("#agendaProcedureSearch").on("blur", function () {
+                $("#agendaProcedureResults").on("click", function () {
+                    validadorAgendar.element("#agendaProcedureId");
+                })
+            });
+            $("#agendaVetSearch").on("blur", function () {
+                $("#agendaVetResults").on("click", function () {
+                    validadorAgendar.element("#agendaVet");
+                })
+            });
             
             try {
                 validadorAgendar.resetForm();
@@ -4320,6 +4535,7 @@ async function cargarDatos() {
                     console.log('FormIngresoRapido validado, enviando...');
                     let p = Object.fromEntries(new FormData(form));
                     let n = new Date();
+                    p.ingreso = 'Ingreso';
                     p.fecha = iso(n);
                     p.hora = n.toTimeString().slice(0, 5);
                     p.estado = 'Pendiente';
@@ -4355,7 +4571,21 @@ async function cargarDatos() {
                     return false;
                 }
             });
-            
+            $("#quickPatientSearch").on("blur", function () {
+                $("#quickPatientResults").on("click", function () {
+                    validadorIngresoRapido.element("#quickPatientId");
+                })
+            });
+            $("#quickProcedureSearch").on("blur", function () {
+                $("#quickProcedureResults").on("click", function () {
+                    validadorIngresoRapido.element("#quickProcedureId");
+                })
+            });
+            $("#quickVetSearch").on("blur", function () {
+                $("#quickVetResults").on("click", function () {
+                    validadorIngresoRapido.element("#quickVet");
+                })
+            });
             try {
                 validadorIngresoRapido.resetForm();
             } catch(e) {}
@@ -4576,14 +4806,14 @@ async function cargarDatos() {
                     nombre: { required: true, minlength: 3 },
                     rut: { required: true, validarRutFormato: true },
                     correo: { required: true, email: true, validarCorreo: true },
-                    telefono: { required: true },
+                    telefono: { required: true, maxlength: 9 },
                     direccion: { required: true }
                 },
                 messages: {
                     nombre: { required: 'Debe ingresar el nombre.' },
                     rut: { required: 'Debe ingresar el RUT.', validarRutFormato: "El RUT debe ser ingresado sin puntos y con guión (Ej: 12345678-9)." },
                     correo: { required: 'Debe ingresar el correo.', email: 'Correo inválido.', validarCorreo: "Ingrese un Correo válido." },
-                    telefono: { required: 'Debe ingresar el teléfono.' },
+                    telefono: { required: 'Debe ingresar el teléfono.', maxlength: 'Máximo 9 digitos' },
                     direccion: { required: 'Debe ingresar la dirección.' }
                 },
                 errorClass: 'text-red-600 text-sm mt-1',
@@ -4799,7 +5029,7 @@ async function cargarDatos() {
                     rut: { required: true, validarRutFormato: true },
                     nombre: { required: true, minlength: 3 },
                     cargo: { required: true },
-                    telefono: { required: true },
+                    telefono: { required: true, maxlength: 9 },
                     correo: { required: true, email: true, validarCorreo: true },
                     direccion: { required: true }
                 },
@@ -4807,7 +5037,7 @@ async function cargarDatos() {
                     rut: { required: 'Debe ingresar el RUT.', validarRutFormato: "El RUT debe ser ingresado sin puntos y con guión (Ej: 12345678-9)." },
                     nombre: { required: 'Debe ingresar el nombre.' },
                     cargo: { required: 'Debe ingresar el cargo.' },
-                    telefono: { required: 'Debe ingresar el teléfono.' },
+                    telefono: { required: 'Debe ingresar el teléfono.', maxlength: 'Máximo 9 digitos' },
                     correo: { required: 'Correo requerido.', email: 'Correo inválido.', validarCorreo: "Ingrese un Correo válido." },
                     direccion: { required: 'Debe ingresar una dirección' }
                 },
@@ -5123,10 +5353,28 @@ async function cargarDatos() {
         }
 
         const logoutBtn = byId('logout');
+        const logoutModal = byId('logoutModal');
+        const btnConfirmLogout = byId('btnConfirmLogout');
+        const btnCancelLogout = byId('btnCancelLogout');
+
         if (logoutBtn) {
             logoutBtn.onclick = () => {
-                if (confirm('¿Cerrar sesión?')) location.href = '/logout/';
+                logoutModal.classList.add('flex')
+                logoutModal.classList.remove('hidden');
+                if (logoutModal){
+                    btnConfirmLogout.onclick = () => {
+                        location.href = '/logout/';
+                    };
+                };
             };
+
+        }
+        
+        if(btnCancelLogout){
+            btnCancelLogout.onclick = () => {
+                logoutModal.classList.add('hidden');
+                logoutModal.classList.remove('flex');
+            }
         }
 
         // Mobile sidebar
@@ -5291,14 +5539,14 @@ async function cargarDatos() {
                     if(generoPaciente.value === 'Macho'){
                         EstadoRep.innerHTML=
                         `
-                            <option value="">Debe Seleccionar Género</option>
+                            <option value="">Seleccione</option>
                             <option>Castrado</option>
                             <option>No Castrado</option>
                         `
                     } else if (generoPaciente.value === 'Hembra'){
                             EstadoRep.innerHTML=
                         `
-                            <option value="">Debe Seleccionar Género</option>
+                            <option value="">Seleccione</option>
                             <option>Esterilizada</option>
                             <option>No Esterilizada</option>
                         `
@@ -5328,6 +5576,7 @@ async function cargarDatos() {
                 if (byId('FormProducto')) iniciarValidacionProducto();
                 if (byId('FormUsuario')) iniciarValidacionUsuario();
                 if (byId('FormEspecie')) iniciarValidacionEspecie();
+                if (byId('cancelForm')) iniciarValidacionCancelacion();
             }, 200);
 
             // Inicializar tags de vacunas
@@ -5404,6 +5653,18 @@ async function cargarDatos() {
                 
                 if (validadorEspecie) {
                     var esValido = validadorEspecie.form();
+                    return false;
+                }
+                return false;
+            });
+
+            // FormCancelacion
+            $('#cancelForm').on('submit', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (validadorCancelacion) {
+                    var esValido = validadorCancelacion.form();
                     return false;
                 }
                 return false;

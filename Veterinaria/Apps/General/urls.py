@@ -55,4 +55,6 @@ urlpatterns = [
     path('delPersonal/', views.delPersonal, name="EliminarPersonal"),
     path('reset-password/', views.resetPassword, name="ResetPassword"),
 
+    path('insertar', views.InsertarDatos, name="InsertarDatos"),
+
 ]
