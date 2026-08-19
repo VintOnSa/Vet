@@ -393,7 +393,8 @@ def gAppointments(request):
                 'meses': agenda.meses,
                 'temperatura': agenda.temperatura,
                 'diagnostico': agenda.diagnostico,
-                'observaciones': agenda.observaciones
+                'observaciones': agenda.observaciones,
+                'motivo': agenda.cancelado
             }
 
             agendas.append(agenda_data)
@@ -591,6 +592,22 @@ def eControl(request):
             'error': f"Error al editar registro - Error: {e}"
         }
     return JsonResponse(data)
+
+@staff_member_required()
+@require_POST
+def cControl(request):
+    try:
+        agenda = Agenda.objects.get(pk=int(request.POST.get('id')))
+        motivo = request.POST.get('cancelReason')
+
+        agenda.estado = 'Cancelada'
+        agenda.cancelado = motivo
+        agenda.save()
+
+        return JsonResponse({'success': 'Agenda cancelada.'})
+    except Exception as e:
+        return JsonResponse({'error': f"Error al cancelar agenda - Error: {e}"})
+
 
 
 @login_required(login_url=LOGIN_URL)

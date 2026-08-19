@@ -516,26 +516,6 @@
                         </div>
                         <div id="calendar" class="mt-2 grid grid-cols-7 border-l border-t"></div>
                     </div>
-                    <div class="rounded-3xl border bg-white p-5 shadow-sm">
-                        <div class="mb-4 flex flex-col justify-between gap-3 md:flex-row">
-                            <div>
-                                <h3 class="font-black text-navy-800">Agendas</h3>
-                                <p id="agendaSubtitle" class="text-sm text-slate-400">Todas las agendas</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <input id="agendaSearch" class="w-full rounded-xl border px-4 py-2 text-sm md:w-80" placeholder="Buscar paciente o procedimiento..." />
-                                <div class="relative export-menu-wrap">
-                                    <button onclick="toggleExportMenu('exportMenuAgenda')" class="btnLight whitespace-nowrap">⬇ Exportar</button>
-                                    <div id="exportMenuAgenda" class="export-menu hidden absolute right-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-                                        <button onclick="exportAgendaPDF()" class="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50">📄 Exportar PDF</button>
-                                        <button onclick="exportAgendaExcel()" class="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50">📊 Exportar Excel</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="agendaList" class="space-y-3"></div>
-                        <div id="agendaPages" class="mt-5"></div>
-                    </div>
                 </section>
 
                 <!-- ========================================================== -->
@@ -583,6 +563,7 @@
                                 <p class="mt-1 text-slate-500">Gestiona los catálogos y datos del sistema.</p>
                             </div>
                             <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                                <button onclick="adminView('agendas')" class="adminCard">📅<b>Agendas</b><small>Gestionar agendas registradas en el sistema.</small></button>
                                 <button onclick="adminView('inventario')" class="adminCard">📦<b>Bodega e inventario</b><small>Gestionar insumos, vacunas, stock y precios.</small></button>
                                 <button onclick="adminView('bodegas')" class="adminCard">🏢<b>Bodegas</b><small>Crear, editar y eliminar bodegas.</small></button>
                                 <button onclick="adminView('procedimientos')" class="adminCard">🩺<b>Procedimientos</b><small>Gestionar procedimientos y precios.</small></button>
@@ -947,6 +928,7 @@
             <!-- Select -->
             <div class="mt-5">
                 <form id="cancelForm" onsubmit="return false;">
+                    <input id="cancelReasonId" name="id" type="hidden" value="">
                     <label for="cancelReason" class="block text-sm font-medium text-slate-700 mb-2">Motivo de cancelación</label>
                     <select id="cancelReason" name="cancelReason" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
                         <option value="" selected disabled>Selecciona un motivo</option>
@@ -961,7 +943,7 @@
                 <button id="btnCancelModal" onclick="closeCancelAttentionModal()" class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition-colors">
                     Cancelar
                 </button>
-                <button id="btnConfirmCancel" class="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors">
+                <button id="btnConfirmCancel" type="submit" form="cancelForm" class="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors">
                     Confirmar
                 </button>
             </div>
@@ -1668,7 +1650,6 @@ async function cargarDatos() {
             renderStats();
             renderDashboard();
             renderCalendar();
-            renderAgenda();
             renderPatients();
             renderStockAlerts();
             fillSelects();
@@ -1765,7 +1746,7 @@ async function cargarDatos() {
 
             for (let d = 1; d <= last; d++) {
                 let date = iso(new Date(y, m, d));
-                let a = (VetAppointments || []).filter(x => x.fecha === date);
+                let a = (VetAppointments || []).filter(x => x.fecha === date).sort((a, b) => String(a.hora).localeCompare(String(b.hora)));
                 let tod = date === iso(new Date());
 
                 html += `<button onclick="selectDay('${date}')" 
@@ -1782,15 +1763,7 @@ async function cargarDatos() {
             if (calendarEl) calendarEl.innerHTML = html;
         }
 
-        function selectDay(d) {
-            selectedDay = d;
-            const agendaSubtitle = byId('agendaSubtitle');
-            if (agendaSubtitle) {
-                agendaSubtitle.textContent = `${dateCL(d)} · ${VetAppointments.filter(a => a.fecha === d).length} agenda(s)`;
-            }
-            renderAgenda();
-            openDayAgendaModal(d);
-        }
+        
 
         function openDayAgendaModal(d) {
             let list = VetAppointments.filter(a => a.fecha === d).sort((a, b) => String(a.hora).localeCompare(String(b.hora)));
@@ -1822,68 +1795,6 @@ async function cargarDatos() {
             openModal('modalDayAgenda');
         }
 
-        function renderAgenda() {
-            let list = getFilteredAgendaList();
-
-            let start = (pages.agenda - 1) * PAGE_SIZE;
-            const agendaList = byId('agendaList');
-            if (agendaList) {
-                agendaList.innerHTML = list.slice(start, start + PAGE_SIZE).map(a =>
-                    `<button onclick="detailAgenda(${a.id})" class="flex w-full flex-col gap-3 rounded-2xl border p-4 text-left hover:bg-slate-50 md:flex-row md:items-center">
-                        <span class="w-16 text-xs text-slate-400">#${a.id}</span>
-                        <span class="flex-1">
-                            <b class="text-lg">${esc(a.paciente.nombre)}</b>
-                            <small class="block text-slate-400">${esc(a.procedimiento)} · ${esc(a.datos_ing)}</small>
-                        </span>
-                        <span class="text-right">
-                            <b class="text-xl text-navy-800">${esc(a.hora)}</b>
-                            <small class="block text-slate-400">${dateCL(a.fecha)}</small>
-                        </span>
-                        <span class="rounded-full px-3 py-1 text-xs font-bold ${esc(a.estado) === 'Atendida' ? 'estado-success' : esc(a.estado) === 'Cancelada' ? 'estado-error' : 'estado-pending'}">${esc(a.estado)}</span>
-                    </button>`
-                ).join('') || '<p class="rounded-2xl bg-slate-50 p-6 text-center text-sm text-slate-400">Sin resultados.</p>';
-            }
-
-            pagesUI('agendaPages', list.length, pages.agenda, p => {
-                pages.agenda = p;
-                renderAgenda();
-            });
-        }
-
-        function getFilteredAgendaList() {
-            const searchEl = byId('agendaSearch');
-            let q = (searchEl?.value || '').toLowerCase();
-            return appointments.filter(a => {
-                let ok = `${a.paciente.nombre} ${a.paciente.nchip} ${a.procedimiento} ${a.datos_ing}`
-                    .toLowerCase()
-                    .includes(q);
-                return ok && (!selectedDay || a.fecha === selectedDay);
-            });
-        }
-
-        function getAgendaExportData() {
-            const list = [...getFilteredAgendaList()].sort((a, b) => `${a.fecha}${a.hora}`.localeCompare(`${b.fecha}${b.hora}`));
-            const headers = ['Fecha', 'Hora', 'Paciente', 'Tipo', 'Procedimiento', 'Veterinario', 'Estado', 'Costo'];
-            const rows = list.map(a => [
-                dateCL(a.fecha), a.hora, a.paciente.nombre, a.tipo || '', a.procedimiento || '',
-                a.veterinario || getVet(a.id_vet), a.estado || '', a.costo ?? ''
-            ]);
-            return { headers, rows };
-        }
-
-        function exportAgendaPDF() {
-            const { headers, rows } = getAgendaExportData();
-            if (!rows.length) { toast('No hay datos para exportar.', true); return; }
-            exportPDF('agenda', 'Agenda', [{ headers, rows }]);
-            closeExportMenus();
-        }
-
-        function exportAgendaExcel() {
-            const { headers, rows } = getAgendaExportData();
-            if (!rows.length) { toast('No hay datos para exportar.', true); return; }
-            exportExcel('agenda', { name: 'Agenda', headers, rows });
-            closeExportMenus();
-        }
 
         function getFilteredPatientsList() {
             const searchEl = byId('patientSearch');
@@ -2702,7 +2613,7 @@ async function cargarDatos() {
             const esPasada = a.fecha < hoy || a.estado === 'Atendida';
             const fueCancelada = a.estado === 'Cancelada';
             const puedeEditar = (!esPasada || !!gUserData.is_admin) && !fueCancelada;
-            const puedeEliminar = !esPasada && (a.estado !== 'Atendida' || a.estado !== 'Cancelada') && !!gUserData.is_admin;
+            const puedeEliminar = (!esPasada && (a.estado !== 'Atendida' || a.estado !== 'Cancelada') && !!gUserData.is_admin);
             const tieneEdad = a.edad !== null && a.edad !== undefined && a.edad !== '';
 
             const detailEl = byId('agendaDetail');
@@ -2745,9 +2656,9 @@ async function cargarDatos() {
                         ${df('Diagnóstico', a.diagnostico)}
                         ${df('Observaciones', a.observaciones)}
                     </div>
-                    ${esPasada ? `<div class="mx-6 mb-4 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500">📌 Esta atención ya ocurrió${puedeEditar ? '' : ' y solo puede ser editada por administración.'}</div>` : ''}
+                    ${fueCancelada ? `<div class="mx-6 mb-4 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500">📌 Esta atención fue ${(String(a.motivo)).toLowerCase()}</div>` : `${esPasada ? `<div class="mx-6 mb-4 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500">📌 Esta atención ya ocurrió${puedeEditar ? '' : ' y solo puede ser editada por administración.'}</div>` : ''}`}
                     <div class="flex justify-end gap-2 border-t p-6">
-                        ${puedeEliminar ? `<button onclick="cancelAttention(${a.id})" class="btnDanger">❌ Cancelar agenda</button>` : ''}
+                         ${fueCancelada ? '' : `${puedeEliminar ? `<button onclick="cancelAttention(${a.id})" class="btnDanger">❌ Cancelar agenda</button>` : ''}`}
                         ${puedeEditar ? `<button onclick="startAttention(${a.id})" class="btnPrimary">🩺 ${esPasada ? 'Editar atención' : 'Iniciar atención'}</button>` : ''}
                         <button onclick="closeModal('modalAgendaDetail')" class="btnLight">Cerrar</button>
                     </div>
@@ -2938,47 +2849,27 @@ async function cargarDatos() {
         }
 
 
-        let cancelId = null;
-
         function cancelAttention(id, confirmed = false){
             const cancelModal = byId('cancelModal');
             const btnConfirmCancel = byId('btnConfirmCancel');
 
             if (!confirmed){
-                cancelId = id;
                 
+                byId('cancelReasonId').value = null;
+                byId('cancelReason').selectedIndex = 0;
+
                 cancelModal.classList.add('flex');
                 cancelModal.classList.remove('hidden');
+                
+                byId('cancelReasonId').value = id;
                 btnConfirmCancel.onclick = function (){
                     cancelAttention(id, true);
                 }
 
+                setTimeout(iniciarValidacionCancelacion, 100);
+
                 return;
             }
-
-            setTimeout(iniciarValidacionCancelacion, 100);
-
-            const fd = new FormData();
-            fd.append('id', cancelId);
-            fetch('/cControl/', {
-                method: 'POST',
-                body: fd,
-                headers: { 'X-CSRFToken': getCookie('csrftoken') }
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    toast('Agenda cancelada.', false);
-                    cargarDatos();
-                    cancelId = null;
-
-                    cancelModal.classList.add('hidden');
-                    cancelModal.classList.remove('flex');
-                } else {
-                    toast(data.error || 'Error al cancelar agenda', true);
-                }
-            })
-            .catch(() => toast('Error de conexión', true));
         }
 
         var validadorCancelacion = null;
@@ -3007,7 +2898,6 @@ async function cargarDatos() {
             } catch(e) {}
 
             validadorCancelacion = $("#cancelForm").validate({
-                ignore: [],
                 rules: {
                     cancelReason: { required: true},
                 },
@@ -3022,6 +2912,25 @@ async function cargarDatos() {
                     error.insertAfter(element);
                 },
                 submitHandler: function(form) {
+                    const fd = new FormData(form);
+
+                    fetch('/cControl/', {
+                        method: 'POST',
+                        body: fd,
+                        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            toast('Agenda cancelada.', false);
+                            cargarDatos();
+                            closeCancelAttentionModal();
+                            closeModal('modalAgendaDetail');
+                        } else {
+                            toast(data.error || 'Error al cancelar agenda', true);
+                        }
+                    })
+                    .catch(() => toast('Error de conexión', true));
                     return false;
                 }
             });
@@ -3033,11 +2942,13 @@ async function cargarDatos() {
 
         function closeCancelAttentionModal(){
             const cancelModal = byId('cancelModal');
+
+            byId('cancelReasonId').value = null;
+            byId('cancelReason').selectedIndex = 0;
             
             cancelModal.classList.add('hidden');
             cancelModal.classList.remove('flex');
             
-            cancelId = null;
         }
 
         // ============================================================
@@ -3396,6 +3307,7 @@ async function cargarDatos() {
         window.adminInventoryFilter = '';
 
         const adminConfig = {
+            agendas:{ title: 'Agendas', subtitle: 'Gestionar agendas registradas en el sistema.' },
             inventario: { title: 'Bodega e inventario', subtitle: 'Insumos y vacunas, stock, precios y descuentos.' },
             bodegas: { title: 'Bodegas', subtitle: 'Listado de bodegas disponibles en el sistema.' },
             procedimientos: { title: 'Procedimientos', subtitle: 'Procedimientos disponibles y sus precios.' },
@@ -3433,6 +3345,8 @@ async function cargarDatos() {
                     'Buscar por código, nombre o tipo...' :
                     type === 'razas' ?
                     'Buscar por nombre de raza...' :
+                    type === 'agendas' ? 
+                    'Buscar por paciente, nchip, procedimiento, veterinario o estado...':
                     'Buscar...';
             }
 
@@ -3448,6 +3362,12 @@ async function cargarDatos() {
                     secondBtn.onclick = () => abrirModalEspecies();
                     secondBtn.classList.remove('hidden');
                 }
+            } else if (type === 'agendas'){
+                if (newBtn) {
+                    newBtn.textContent = '+ Agendar';
+                    newBtn.onclick = () => openAgendaModal();
+                }
+                if (secondBtn) {secondBtn.classList.add('hidden'); }
             } else {
                 if (newBtn) {
                     newBtn.textContent = '+ Nuevo';
@@ -3472,6 +3392,7 @@ async function cargarDatos() {
         }
 
         function adminData(type) {
+            if (type === 'agendas') return appointments;
             if (type === 'inventario') return inventory;
             if (type === 'bodegas') return warehouses;
             if (type === 'procedimientos') return procedures;
@@ -3498,6 +3419,20 @@ async function cargarDatos() {
             }
             if (type === 'inventario' && window.adminInventoryFilter) {
                 list = list.filter(x => x.tipo === window.adminInventoryFilter);
+            }
+            if (type === 'agendas') {
+                list = list.filter(x => {
+                    const ag = [x.paciente?.nombre, x.paciente?.nchip, x.procedimiento, x.veterinario, x.estado]
+                        .filter(Boolean)
+                        .join(' ')
+                        .toLowerCase();
+                    return ag.includes(q);
+                });
+                list = list.sort((a,b) => String(a.fecha, a.hora).localeCompare(String(b.fecha,b.hora)));
+            } else {
+                list = list.filter(x =>
+                    JSON.stringify(x).toLowerCase().includes(q)
+                );
             }
             return list;
         }
@@ -3531,6 +3466,9 @@ async function cargarDatos() {
                     const fin = Math.round(Number(x.precio || 0) * (1 - Number(x.descuento || 0) / 100));
                     return [x.codigo, x.nombre, x.tipo, x.unidad, x.ubicacion_nombre || '—', x.stock ?? '', x.precio ?? '', `${Number(x.descuento || 0)}%`, fin];
                 });
+            } else if (type === 'agendas') {
+                headers = ['Fecha', 'Hora', 'Paciente', 'Tipo', 'Procedimiento', 'Veterinario', 'Estado', 'Costo'];
+                rows = list.map(a => [dateCL(a.fecha), a.hora, a.paciente.nombre, a.tipo || '', a.procedimiento || '',a.veterinario || getVet(a.id_vet), a.estado || '', a.costo ?? '']);
             } else if (type === 'bodegas') {
                 headers = ['Código', 'Nombre', 'Ubicación', 'Encargado'];
                 rows = list.map(x => [x.codigo, x.nombre, x.ubicacion || '', x.encargado || '']);
@@ -3604,6 +3542,40 @@ async function cargarDatos() {
         }
 
         function adminTableHTML(type, rows) {
+            if (type === 'agendas') {
+                return `<table class="min-w-full text-left text-sm">
+                    <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                        <tr>
+                            <th class="px-5 py-4">Fecha</th>
+                            <th class="px-5 py-4">Hora</th>
+                            <th class="px-5 py-4">Paciente</th>
+                            <th class="px-5 py-4">Tipo</th>
+                            <th class="px-5 py-4">Procedimiento</th>
+                            <th class="px-5 py-4">Veterinario</th>
+                            <th class="px-5 py-4">Estado</th>
+                            <th class="px-5 py-4">Costo</th>
+                            <th class="px-5 py-4 text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(x => {
+                            return `<tr class="border-b border-slate-100 hover:bg-slate-50">
+                                <td class="px-5 py-4 font-bold text-navy-800">${esc(x.fecha)}</td>
+                                <td class="px-5 py-4">${esc(x.hora)}</td>
+                                <td class="px-5 py-4">${esc(x.paciente.nombre)}</td>
+                                <td class="px-5 py-4">${esc(x.tipo)}</td>
+                                <td class="px-5 py-4">${esc(x.procedimiento || '—')}</td>
+                                <td class="px-5 py-4">${esc(x.veterinario)}</td>
+                                <td class="px-5 py-4"><span class="rounded-full px-2.5 py-1 text-xs font-bold ${esc(x.estado) === 'Atendida' ? 'estado-success' : esc(x.estado) === 'Cancelada' ? 'estado-error' : 'estado-pending'}">${esc(x.estado)}</span></td>
+                                <td class="px-5 py-4 font-bold">${money(x.costo)}</td>
+                                <td class="px-5 py-4 text-right whitespace-nowrap">
+                                    <button onclick="detailAgenda(${x.id})" class="font-semibold text-blue-700">Ver</button>
+                                </td>
+                            </tr>`;
+                        }).join('') || emptyTable(10, 'No hay agendas registrados.')}
+                    </tbody>
+                </table>`;
+            }
             if (type === 'inventario') {
                 return `<table class="min-w-full text-left text-sm">
                     <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -5420,13 +5392,6 @@ async function cargarDatos() {
             });
         }
 
-        const agendaSearch = byId('agendaSearch');
-        if (agendaSearch) {
-            agendaSearch.oninput = () => {
-                pages.agenda = 1;
-                renderAgenda();
-            };
-        }
 
         const patientSearchEl = byId('patientSearch');
         if (patientSearchEl) {

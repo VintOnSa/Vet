@@ -27,6 +27,7 @@ urlpatterns = [
 #========================= FUNCIONES CONTROLES ======================================
     path('aControl/', views.aControl, name="AgendarControl"),
     path('eControl/', views.eControl, name="EditarControl"),
+    path('cControl/', views.cControl, name="CancelarControl"),
     path('aDueno/', views.aDueno, name="AgregarDueno"),
     path('eUsuario/', views.eUsuario, name="EditarUsuario"),
     path('aPaciente/', views.aPaciente, name="AgregarPaciente"),
