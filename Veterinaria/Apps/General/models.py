@@ -103,8 +103,8 @@ class VacunasPaciente(models.Model):
     fecha = models.DateField(null=True, blank=True)
 
     def __str__(self):
-        txt = "Paciente: {0} - Vacuna: {1} - Fecha: {2}"
-        return txt.format(self.paciente.nombre, self.nombre, self.fecha)
+        txt = "ID: {0} - Paciente: {1} - ID Vacuna: {2} - Vacuna: {3} - Fecha: {4}"
+        return txt.format(self.pk, self.paciente.nombre, self.vacuna.pk, self.nombre, self.fecha)
 
 
 class CirugiasPaciente(models.Model):

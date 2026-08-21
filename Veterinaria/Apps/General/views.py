@@ -14,6 +14,8 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.cache import never_cache
 from django.utils import timezone
+from functools import wraps
+
 
 # Create your views here.
 HORAS = ['10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30']
@@ -139,9 +141,19 @@ def login_view(request):
 
     error = None
     if request.method == "POST":
-        usuario = request.POST.get('usuario')
-        password = request.POST.get('password')
+        usuario = request.POST.get('usuario').strip()
+        password = request.POST.get('password').strip()
         user = authenticate(request, username=usuario, password=password)
+
+        ip = request.META.get('REMOTE_ADDR')
+        cache_key = f"rate_limit:{ip}"
+    
+        intentos = cache.get(cache_key, 0)
+    
+        if intentos >= 5:
+            return render(request, 'login.html', {'error': 'Demasiadas solicitudes. Intenta nuevamente en un minuto.'})
+    
+        cache.set(cache_key, intentos + 1, 60)
         
         if user is not None:
             login(request, user)
@@ -519,6 +531,7 @@ def aControl(request):
 
         with transaction.atomic():
             Agenda.objects.create(
+                origen = request.POST.get('origen'),
                 paciente = paciente,
                 datos_ing = datos_ing,
                 tipo = tipo,
@@ -783,6 +796,38 @@ def ePaciente(request):
                 paciente.dueno = Dueno.objects.get(pk=int(dueno_id))
             paciente.save()
 
+            vacunas_raw = request.POST.get('vacunas') or ''
+            ids_vacunas = {
+                int(v.strip())
+                for v in vacunas_raw.split(',')
+                if v.strip().isdigit()
+            }
+            try:
+                VacunasPaciente.objects.filter(paciente=paciente).exclude(vacuna_id__in=ids_vacunas).delete()
+            except Exception as e:
+                print(f"Error al eliminar vacunas - Error: {e}")
+
+            try:
+                for vac in ids_vacunas:
+                    if not vac:
+                        print("No hay Vacuna.")
+                        continue
+                    try:
+                        insumo = Insumo.objects.get(pk=int(vac))
+                        if not VacunasPaciente.objects.filter(paciente=paciente, vacuna_id=vac).exists():        
+                            VacunasPaciente.objects.create(
+                                paciente = paciente,
+                                vacuna = insumo,
+                                nombre = insumo.nombre
+                            )
+                        else:
+                            print(f"La Vacuna: ID: {vac} - Nombre: {insumo.nombre} ya estaba registrada para el Paciente.")
+
+                    except Insumo.DoesNotExist:
+                        continue
+            except Exception as e:
+                print(f"Error al añadir vacunas - Error: {e}")
+            
         data = {
             'success': True,
             'id': paciente.pk
@@ -914,7 +959,13 @@ def aBodega(request):
                 ubicacion = request.POST.get('ubicacion').upper(),
                 encargado = request.POST.get('encargado').title()
             )
-            bodega.codigo = f"BOD-{bodega.pk:03d}"
+            cant_bod = (Bodega.objects.all()).count()
+            codigo = f"BOD-{int(cant_bod):03d}"
+            while Bodega.objects.filter(codigo=codigo).exists():
+                cant_bod += 1
+                codigo = f"BOD-{int(cant_bod):03d}"
+
+            bodega.codigo = codigo
             bodega.save()
 
         data = {
@@ -965,6 +1016,8 @@ def eBodega(request):
 @require_POST
 def delBodega(request):
     data = {}
+    if Bodega.objects.count() == 1:
+        return JsonResponse({'success': False, 'error':"Debe existir al menos una bodega."})
     try:
         bodega = Bodega.objects.get(pk=int(request.POST.get('id')))
         if Insumo.objects.filter(ubicacion=bodega).exists():
@@ -1517,6 +1570,11 @@ def resetPassword(request):
     return JsonResponse(data)
 
 
+
+#============================================================================================================================================================
+#===========================================         GENERACION DATOS DE PRUEBA         =====================================================================
+#============================================================================================================================================================
+
 def InsertarDatos(request):
     procedimientos = [
         # Abdominocentesis
@@ -1847,3 +1905,776 @@ def InsertarDatos(request):
     Procedimiento.objects.bulk_create(procedimientos)
 
     return JsonResponse({'success': 'Se insertaron los datos sin problema'})
+
+
+
+
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from django.db import transaction
+from django.utils import timezone
+
+@login_required(login_url=LOGIN_URL)
+@require_GET
+def cargar_pacientes_prueba(request):
+
+    pacientes_data = [
+        {
+            'nchip': 985123456,
+            'nombre': 'Firulais',
+            'especie': 'Perro',
+            'raza': 'Labrador',
+            'genero': 'Macho',
+            'edad': 4,
+            'meses': 3,
+            'peso': '18.5',
+            'marca': 'No',
+            'estd_rep': 'Castrado',
+            'vacunas': [1, 2],
+        },
+        {
+            'nchip': 985123457,
+            'nombre': 'Luna',
+            'especie': 'Perro',
+            'raza': 'Golden Retriever',
+            'genero': 'Hembra',
+            'edad': 3,
+            'meses': 6,
+            'peso': '24.2',
+            'marca': 'Sí',
+            'estd_rep': 'Esterilizada',
+            'vacunas': [1, 2],
+        },
+        {
+            'nchip': 985123458,
+            'nombre': 'Max',
+            'especie': 'Perro',
+            'raza': 'Pastor Alemán',
+            'genero': 'Macho',
+            'edad': 6,
+            'meses': 1,
+            'peso': '31.5',
+            'marca': 'No',
+            'estd_rep': 'Castrado',
+            'vacunas': [1],
+        },
+        {
+            'nchip': 985123459,
+            'nombre': 'Mia',
+            'especie': 'Gato',
+            'raza': 'Siamés',
+            'genero': 'Hembra',
+            'edad': 2,
+            'meses': 4,
+            'peso': '4.3',
+            'marca': 'No',
+            'estd_rep': 'Esterilizada',
+            'vacunas': [1, 2],
+        },
+        {
+            'nchip': 985123460,
+            'nombre': 'Rocky',
+            'especie': 'Perro',
+            'raza': 'Bulldog Francés',
+            'genero': 'Macho',
+            'edad': 5,
+            'meses': 8,
+            'peso': '12.7',
+            'marca': 'Sí',
+            'estd_rep': 'No Castrado',
+            'vacunas': [1],
+        },
+        {
+            'nchip': 985123461,
+            'nombre': 'Nala',
+            'especie': 'Gato',
+            'raza': 'Mestizo',
+            'genero': 'Hembra',
+            'edad': 1,
+            'meses': 9,
+            'peso': '3.8',
+            'marca': 'No',
+            'estd_rep': 'Esterilizada',
+            'vacunas': [1, 2],
+        },
+        {
+            'nchip': 985123462,
+            'nombre': 'Thor',
+            'especie': 'Perro',
+            'raza': 'Rottweiler',
+            'genero': 'Macho',
+            'edad': 7,
+            'meses': 2,
+            'peso': '42.0',
+            'marca': 'No',
+            'estd_rep': 'Castrado',
+            'vacunas': [1, 2],
+        },
+        {
+            'nchip': 985123463,
+            'nombre': 'Coco',
+            'especie': 'Perro',
+            'raza': 'Poodle',
+            'genero': 'Hembra',
+            'edad': 8,
+            'meses': 5,
+            'peso': '7.4',
+            'marca': 'No',
+            'estd_rep': 'No Esterilizada',
+            'vacunas': [1],
+        },
+        {
+            'nchip': 985123464,
+            'nombre': 'Simba',
+            'especie': 'Gato',
+            'raza': 'Persa',
+            'genero': 'Macho',
+            'edad': 4,
+            'meses': 7,
+            'peso': '5.6',
+            'marca': 'Sí',
+            'estd_rep': 'No Castrado',
+            'vacunas': [1, 2],
+        },
+        {
+            'nchip': 985123465,
+            'nombre': 'Canela',
+            'especie': 'Perro',
+            'raza': 'Cocker Spaniel',
+            'genero': 'Hembra',
+            'edad': 5,
+            'meses': 0,
+            'peso': '13.9',
+            'marca': 'No',
+            'estd_rep': 'Esterilizada',
+            'vacunas': [1, 2],
+        },
+        {
+            'nchip': 985123466,
+            'nombre': 'Bruno',
+            'especie': 'Perro',
+            'raza': 'Boxer',
+            'genero': 'Macho',
+            'edad': 3,
+            'meses': 11,
+            'peso': '27.3',
+            'marca': 'No',
+            'estd_rep': 'Castrado',
+            'vacunas': [1],
+        },
+        {
+            'nchip': 985123467,
+            'nombre': 'Maya',
+            'especie': 'Gato',
+            'raza': 'Angora',
+            'genero': 'Hembra',
+            'edad': 6,
+            'meses': 3,
+            'peso': '4.9',
+            'marca': 'No',
+            'estd_rep': 'No Esterilizada',
+            'vacunas': [1, 2],
+        },
+        {
+            'nchip': 985123468,
+            'nombre': 'Toby',
+            'especie': 'Perro',
+            'raza': 'Beagle',
+            'genero': 'Macho',
+            'edad': 2,
+            'meses': 8,
+            'peso': '10.8',
+            'marca': 'Sí',
+            'estd_rep': 'No Castrado',
+            'vacunas': [1],
+        },
+        {
+            'nchip': 985123469,
+            'nombre': 'Kira',
+            'especie': 'Perro',
+            'raza': 'Husky Siberiano',
+            'genero': 'Hembra',
+            'edad': 4,
+            'meses': 10,
+            'peso': '22.5',
+            'marca': 'No',
+            'estd_rep': 'Esterilizada',
+            'vacunas': [1, 2],
+        },
+        {
+            'nchip': 985123470,
+            'nombre': 'Jack',
+            'especie': 'Perro',
+            'raza': 'Dachshund',
+            'genero': 'Macho',
+            'edad': 9,
+            'meses': 2,
+            'peso': '8.1',
+            'marca': 'No',
+            'estd_rep': 'Castrado',
+            'vacunas': [1, 2],
+        },
+        {
+            'nchip': 985123471,
+            'nombre': 'Lola',
+            'especie': 'Gato',
+            'raza': 'Mestizo',
+            'genero': 'Hembra',
+            'edad': 3,
+            'meses': 1,
+            'peso': '4.1',
+            'marca': 'Sí',
+            'estd_rep': 'Esterilizada',
+            'vacunas': [1],
+        },
+        {
+            'nchip': 985123472,
+            'nombre': 'Zeus',
+            'especie': 'Perro',
+            'raza': 'Gran Danés',
+            'genero': 'Macho',
+            'edad': 5,
+            'meses': 6,
+            'peso': '54.7',
+            'marca': 'No',
+            'estd_rep': 'No Castrado',
+            'vacunas': [1, 2],
+        },
+        {
+            'nchip': 985123473,
+            'nombre': 'Princesa',
+            'especie': 'Perro',
+            'raza': 'Chihuahua',
+            'genero': 'Hembra',
+            'edad': 7,
+            'meses': 4,
+            'peso': '3.2',
+            'marca': 'No',
+            'estd_rep': 'No Esterilizada',
+            'vacunas': [1],
+        },
+        {
+            'nchip': 985123474,
+            'nombre': 'Bobby',
+            'especie': 'Perro',
+            'raza': 'Mestizo',
+            'genero': 'Macho',
+            'edad': 10,
+            'meses': 0,
+            'peso': '19.6',
+            'marca': 'Sí',
+            'estd_rep': 'Castrado',
+            'vacunas': [1, 2],
+        },
+        {
+            'nchip': 985123475,
+            'nombre': 'Pelusa',
+            'especie': 'Gato',
+            'raza': 'Mestizo',
+            'genero': 'Hembra',
+            'edad': 2,
+            'meses': 7,
+            'peso': '3.5',
+            'marca': 'No',
+            'estd_rep': 'No Esterilizada',
+            'vacunas': [1],
+        },
+    ]
+
+    creados = []
+    existentes = []
+
+    try:
+        dueno = Dueno.objects.get(pk=1)
+
+        with transaction.atomic():
+
+            for datos in pacientes_data:
+
+                # Evita duplicar pacientes si ejecutas la URL nuevamente
+                if Paciente.objects.filter(nchip=datos['nchip']).exists():
+                    existentes.append(datos['nombre'])
+                    continue
+
+                paciente = Paciente.objects.create(
+                    nchip=datos['nchip'],
+                    nombre=datos['nombre'],
+                    especie=datos['especie'],
+                    raza=datos['raza'],
+                    genero=datos['genero'],
+                    edad=datos['edad'],
+                    meses=datos['meses'],
+                    peso=datos['peso'],
+                    marca=datos['marca'],
+                    estd_rep=datos['estd_rep'],
+                    dueno=dueno,
+                    fecha_ins=timezone.now()
+                )
+
+                # Agregar vacunas
+                for vid in datos['vacunas']:
+                    try:
+                        insumo = Insumo.objects.get(pk=vid)
+
+                        VacunasPaciente.objects.create(
+                            paciente=paciente,
+                            vacuna=insumo,
+                            nombre=insumo.nombre
+                        )
+
+                    except Insumo.DoesNotExist:
+                        continue
+
+                creados.append(paciente.nombre)
+
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Pacientes de prueba cargados correctamente.',
+            'creados': len(creados),
+            'existentes': len(existentes),
+            'pacientes_creados': creados,
+            'pacientes_existentes': existentes
+        })
+
+    except Dueno.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'No existe el dueño con ID 1.'
+        })
+
+    except Exception as e:
+        print(f'Error cargando pacientes de prueba: {e}')
+
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+
+
+
+    from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from django.db import transaction
+from django.utils import timezone
+from datetime import date, timedelta
+import random
+
+
+@login_required(login_url=LOGIN_URL)
+@require_GET
+def cargar_citas_prueba(request):
+
+    # ---------------------------------------------------------
+    # CONFIGURACIÓN
+    # ---------------------------------------------------------
+
+    fecha_inicio = date(2026, 8, 21)
+    fecha_fin = date(2026, 9, 10)
+
+    # Horarios disponibles
+    horas = [
+        "10:00",
+        "11:00",
+        "12:00",
+        "13:00",
+        "14:00",
+        "15:00",
+        "16:00",
+        "17:00",
+    ]
+
+    # Días en los que NO se crearán citas
+    dias_vacios = {
+        date(2026, 8, 23),
+        date(2026, 8, 26),
+        date(2026, 8, 30),
+        date(2026, 9, 2),
+        date(2026, 9, 6),
+        date(2026, 9, 9),
+    }
+
+    # ---------------------------------------------------------
+    # PROCEDIMIENTOS COMPATIBLES
+    # ---------------------------------------------------------
+
+    procedimientos_generales = [
+        "Consulta AE. EX.",
+        "Consulta AE. SJ.",
+        "Consulta EX.",
+        "Consulta SJ.",
+        "Control EX.",
+        "Control SJ.",
+        "Certificado De Salud",
+        "Corte De Uñas EX.",
+        "Corte De Uñas SJ.",
+        "Limpieza De Herida Simple",
+        "Toma De Muestras Externas",
+        "Toma De Muestras Sangre",
+        "Implantación De Microchip",
+        "Vacuna Antirrábica",
+        "Vacuna Óctuple SJ",
+        "Vacuna Óctuple",
+        "Vacuna Triple Felina",
+        "Sedación Canina A",
+        "Sedación Felina A",
+    ]
+
+    procedimientos_caninos = [
+        "Abscesos Canino A",
+        "Abscesos Canino B",
+        "Abscesos Canino C",
+        "Aseo Quirúrgico Canino",
+        "Amputación Canina",
+        "Cesárea Canina A",
+        "Cesárea Canina B",
+        "Cesárea Canina C",
+        "Cesárea Canina D",
+        "Cesárea Radical Canina",
+        "Cistotomía Canina A",
+        "Cistotomía Canina B",
+        "Cistotomía Canina C",
+        "Curaciones Caninas",
+        "Destartraje Canino",
+        "Esterilización Canina",
+        "Falangectomía Canina",
+        "Hemometra Canina A",
+        "Hemometra Canina B",
+        "Hemometra Canina C",
+        "Hemometra Canina D",
+        "Hernia Inguinal Canina",
+        "Hernia Perianal Canina",
+        "Hernia Umbilical Canina",
+        "Laparotomía Canina",
+        "Lavado De Oído Canino",
+        "Mastectomía Línea Completa",
+        "Sedación Canina A",
+        "Sedación Canina B",
+        "Sedación Canina C",
+        "Sondaje Urinario Canino",
+        "Sutura Canina A",
+        "Sutura Canina B",
+        "Tumores Canino A",
+        "Tumores Canino B",
+        "Tumores Caninos C",
+        "Tumores Caninos D",
+        "Tumores Caninos E",
+        "Vendaje Canino A",
+        "Vendaje Canino B",
+    ]
+
+    procedimientos_felinos = [
+        "Abscesos Felino A",
+        "Abscesos Felino B",
+        "Abscesos Felino C",
+        "Aseo Quirúrgico Felino",
+        "Amputación Felina A",
+        "Amputación Felina B",
+        "Amputación Felina C",
+        "Cesárea Felina A",
+        "Cesárea Felina B",
+        "Cesárea Radical Felina",
+        "Cistotomía Felina A",
+        "Cistotomía Felina B",
+        "Cistotomía Felina C",
+        "Curaciones Felinas",
+        "Destartraje Felino",
+        "Esterilización Felina",
+        "Falangectomía Felina",
+        "Hemometra Felina A",
+        "Hemometra Felina B",
+        "Hernia Inguinal Felina",
+        "Hernia Perianal Felina",
+        "Hernia Umbilical Felina",
+        "Laparotomía Felina",
+        "Lavado De Oído Felino",
+        "Sedación Felina A",
+        "Sedación Felina B",
+        "Sondaje Urinario Felino",
+        "Sutura Felina A",
+        "Sutura Felina B",
+        "Tumores Felino A",
+        "Tumores Felino B",
+        "Vendaje Felino A",
+        "Vendaje Felino B",
+    ]
+
+    # ---------------------------------------------------------
+    # OBTENER PACIENTES DE PRUEBA
+    # ---------------------------------------------------------
+
+    pacientes = list(
+        Paciente.objects.filter(
+            nchip__gte=985123456,
+            nchip__lte=985123475
+        ).order_by("id")
+    )
+
+    if not pacientes:
+        return JsonResponse({
+            "success": False,
+            "error": "No se encontraron los pacientes de prueba. Carga primero los pacientes."
+        })
+
+    # ---------------------------------------------------------
+    # OBTENER VETERINARIOS
+    # ---------------------------------------------------------
+
+    veterinarios = list(
+        Personal.objects.all().order_by("id")
+    )
+
+    if not veterinarios:
+        return JsonResponse({
+            "success": False,
+            "error": "No existen veterinarios en Personal."
+        })
+
+    # ---------------------------------------------------------
+    # FUNCIÓN PARA BUSCAR PROCEDIMIENTO
+    # ---------------------------------------------------------
+
+    def obtener_procedimiento(nombre):
+
+        procedimientos = list(
+            Procedimiento.objects.filter(
+                nombre=nombre
+            )
+        )
+
+        if not procedimientos:
+            return None
+
+        # Si existen varias versiones con distinto precio,
+        # elegimos una aleatoriamente.
+        return random.choice(procedimientos)
+
+    # ---------------------------------------------------------
+    # GENERAR CITAS
+    # ---------------------------------------------------------
+
+    citas_creadas = []
+    citas_existentes = []
+
+    try:
+
+        with transaction.atomic():
+
+            fecha_actual = fecha_inicio
+
+            indice_paciente = 0
+            indice_vet = 0
+
+            while fecha_actual <= fecha_fin:
+
+                # Día vacío
+                if fecha_actual not in dias_vacios:
+
+                    # Algunos días 2 y otros 3
+                    cantidad = random.choice([2, 3])
+
+                    horas_dia = random.sample(
+                        horas,
+                        cantidad
+                    )
+
+                    horas_dia.sort()
+
+                    for hora in horas_dia:
+
+                        paciente = pacientes[
+                            indice_paciente % len(pacientes)
+                        ]
+
+                        vet = veterinarios[
+                            indice_vet % len(veterinarios)
+                        ]
+
+                        indice_paciente += 1
+                        indice_vet += 1
+
+                        # -----------------------------------------
+                        # PROCEDIMIENTOS SEGÚN ESPECIE
+                        # -----------------------------------------
+
+                        if paciente.especie.lower() == "perro":
+
+                            disponibles = (
+                                procedimientos_generales
+                                + procedimientos_caninos
+                            )
+
+                            # Evitar procedimientos felinos
+                            disponibles = [
+                                p for p in disponibles
+                                if "Felino" not in p
+                                and "Felina" not in p
+                                and "Gatos" not in p
+                            ]
+
+                            # Castración solamente para macho
+                            if paciente.genero == "Macho":
+
+                                disponibles += [
+                                    "Castración Criptorquídica",
+                                    "Castración Monorquídica",
+                                    "Caudectomía Terapéutica",
+                                ]
+
+                            # Esterilización solamente para hembra
+                            if paciente.genero == "Hembra":
+
+                                disponibles += [
+                                    "Esterilización Canina",
+                                    "Mastectomía Línea Completa",
+                                ]
+
+                        else:
+
+                            disponibles = (
+                                procedimientos_generales
+                                + procedimientos_felinos
+                            )
+
+                            # Evitar procedimientos caninos
+                            disponibles = [
+                                p for p in disponibles
+                                if "Canino" not in p
+                                and "Canina" not in p
+                            ]
+
+                            # Esterilización solamente para hembra
+                            if paciente.genero == "Hembra":
+
+                                disponibles += [
+                                    "Esterilización Felina",
+                                ]
+
+                        # -----------------------------------------
+                        # BUSCAR UN PROCEDIMIENTO EXISTENTE
+                        # -----------------------------------------
+
+                        procedimiento = None
+
+                        # Intentamos varias veces hasta encontrar
+                        # uno que realmente exista en BD.
+                        for _ in range(20):
+
+                            nombre_proc = random.choice(
+                                disponibles
+                            )
+
+                            procedimiento = obtener_procedimiento(
+                                nombre_proc
+                            )
+
+                            if procedimiento:
+                                break
+
+                        # Si no encontramos ninguno, saltamos
+                        if not procedimiento:
+                            continue
+
+                        # -----------------------------------------
+                        # ORIGEN
+                        # -----------------------------------------
+
+                        # Algunas citas entran directamente como
+                        # "Ingreso", otras usan el default "Agenda".
+                        usar_ingreso = random.choice([
+                            True,
+                            False,
+                            False
+                        ])
+
+                        origen = "Ingreso" if usar_ingreso else None
+
+                        # -----------------------------------------
+                        # EVITAR DUPLICADOS
+                        # -----------------------------------------
+
+                        filtro = {
+                            "paciente": paciente,
+                            "fecha": fecha_actual,
+                            "hora": hora,
+                            "id_vet": vet,
+                        }
+
+                        if Agenda.objects.filter(**filtro).exists():
+
+                            citas_existentes.append({
+                                "paciente": paciente.nombre,
+                                "fecha": str(fecha_actual),
+                                "hora": hora,
+                            })
+
+                            continue
+
+                        # -----------------------------------------
+                        # CREAR AGENDA
+                        # -----------------------------------------
+
+                        datos_ing = random.choice([
+                            "Control general",
+                            "Paciente ingresa a consulta",
+                            "Evaluacion medica",
+                            "Control veterinario",
+                            "Revision de rutina",
+                            "Consulta por procedimiento",
+                        ])
+
+                        agenda_data = {
+                            "paciente": paciente,
+                            "datos_ing": datos_ing,
+                            "tipo": "Consulta",
+                            "procedimiento": procedimiento.nombre,
+                            "costo": procedimiento.precio,
+                            "fecha": fecha_actual,
+                            "hora": hora,
+                            "veterinario": vet.nombre,
+                            "id_vet": vet,
+                        }
+
+                        # Si no especificamos origen,
+                        # Django utilizará el default del modelo.
+                        if origen:
+                            agenda_data["origen"] = origen
+
+                        cita = Agenda.objects.create(
+                            **agenda_data
+                        )
+
+                        citas_creadas.append({
+                            "id": cita.pk,
+                            "paciente": paciente.nombre,
+                            "especie": paciente.especie,
+                            "fecha": str(fecha_actual),
+                            "hora": hora,
+                            "procedimiento": procedimiento.nombre,
+                            "veterinario": vet.nombre,
+                            "origen": origen or "Agenda",
+                        })
+
+                fecha_actual += timedelta(days=1)
+
+        return JsonResponse({
+            "success": True,
+            "mensaje": "Citas de prueba creadas correctamente.",
+            "creadas": len(citas_creadas),
+            "existentes": len(citas_existentes),
+            "citas": citas_creadas,
+        })
+
+    except Exception as e:
+
+        print(
+            f"Error al cargar citas de prueba - Error: {e}"
+        )
+
+        return JsonResponse({
+            "success": False,
+            "error": str(e),
+        })

@@ -56,6 +56,8 @@ urlpatterns = [
     path('delPersonal/', views.delPersonal, name="EliminarPersonal"),
     path('reset-password/', views.resetPassword, name="ResetPassword"),
 
-    path('insertar', views.InsertarDatos, name="InsertarDatos"),
-
+#====================== GENERACION DATOS DE PRUEBA ==================================
+    #path('insertar', views.InsertarDatos, name="InsertarDatos"),
+    #path('cargar-pacientes-prueba/', views.cargar_pacientes_prueba, name='cargar_pacientes_prueba'),
+    #path('cargar-citas-prueba/',views.cargar_citas_prueba,name='cargar_citas_prueba'),
 ]

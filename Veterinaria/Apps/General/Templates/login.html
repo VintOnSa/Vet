@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
-{% load static %}
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="https://i.imgur.com/tAz9ddU.png" type="image/png">
     <title>Iniciar sesión — Veterinaria Municipal</title>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -39,7 +42,7 @@
 <body class="flex min-h-screen items-center justify-center bg-[#38223c] px-4">
     <div class="w-full max-w-sm">
         <div class="mb-6 flex flex-col items-center text-center">
-            <img src="{% static 'img/logo_largo.png' %}" class="mb-4" style="width: 350px; height: 190px;">
+            <img src="https://i.imgur.com/AaQLQRh.png" class="mb-4" style="width: 350px; height: 190px;">
             <h1 class="text-2xl font-black text-white">Veterinaria Municipal</h1>
         </div>
 
@@ -51,17 +54,15 @@
             <div class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{{ error }}</div>
             {% endif %}
 
-            <form method="post" class="space-y-4">
+            <form id="login" method="post" class="space-y-4">
                 {% csrf_token %}
                 <div>
                     <label class="mb-1 block text-sm font-bold text-slate-700">Usuario</label>
-                    <input name="usuario" autocomplete="username" required autofocus
-                        class="w-full rounded-xl border border-slate-200 px-4 py-2.5 outline-none focus:border-blue-500" />
+                    <input name="usuario" autocomplete="username" autofocus class="w-full rounded-xl border border-slate-200 px-4 py-2.5 outline-none focus:border-blue-500" />
                 </div>
                 <div>
                     <label class="mb-1 block text-sm font-bold text-slate-700">Contraseña</label>
-                    <input name="password" type="password" autocomplete="current-password" required
-                        class="w-full rounded-xl border border-slate-200 px-4 py-2.5 outline-none focus:border-blue-500" />
+                    <input name="password" type="password" autocomplete="current-password" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 outline-none focus:border-blue-500" />
                 </div>
                 <button type="submit" class="w-full rounded-xl bg-navy-700 py-2.5 font-bold text-white hover:bg-navy-800">
                     Entrar
@@ -71,29 +72,59 @@
 
         <p class="mt-5 text-center text-xs text-white">Sistema de gestión veterinaria</p>
     </div>
-    {% if messages %}
-        {% for message in messages %}
-            {% if message.tags == 'success' %}
-                <div id="messageToast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg z-[9999] transition-opacity duration-700 pointer-events-none" role="alert" aria-live="assertive" aria-atomic="true">
-            {% elif message.tags == 'error' %}
-                <div id="messageToast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg z-[9999] transition-opacity duration-700 pointer-events-none" role="alert" aria-live="assertive" aria-atomic="true">
-            {% endif %}
-                <p class="text-center">{{ message }}</p>
-            </div>
-        {% endfor %}
-    {% endif %}
+
     <script>
-        const messageToast = document.getElementById('messageToast');
-        if (messageToast) {
-            setTimeout(() =>{
-                if(messageToast) messageToast.classList.add('opacity-0');
-            }, 1000);
-            if (messageToast){
-                messageToast.addEventListener('transitionend', () => {
-                    if(messageToast) messageToast.remove();
-                });
+        var validador = null;
+
+        function iniciarValidacion() {
+            const f = document.getElementById('login');
+            if (!f) {
+                console.warn('Login no encontrado');
+                return;
             }
+
+            if (typeof $ === 'undefined' || !$.fn || !$.fn.validate) {
+                console.warn('jQuery Validate no está disponible');
+                return;
+            }
+
+            if (validador) {
+                try { validador.destroy(); } catch(e) {}
+                validador = null;
+            }
+
+            try {
+                $("#login").find('.error').removeClass('error');
+                $("#login").find('.border-red-600').removeClass('border-red-600');
+                $("#login").find('label.error').remove();
+            } catch(e) {}
+
+            validador = $("#login").validate({
+                rules: {
+                    usuario: { required: true },
+                    password: { required: true }
+                },
+                messages: {
+                    usuario: { required: 'Debe ingresar un usuario.' },
+                    password: { required: 'Debe ingresar la contraseña.' }
+                },
+                errorClass: 'text-red-600 text-sm mt-1',
+                errorElement: 'div',
+                highlight: el => $(el).addClass('border-red-600'),
+                unhighlight: el => $(el).removeClass('border-red-600'),
+                errorPlacement: function(error, element) {
+                    error.insertAfter(element);
+                },
+                submitHandler: function(form) {
+                    form.submit();
+                }
+            });
+
+            try {
+                validador.resetForm();
+            } catch(e) {}
         }
+        iniciarValidacion();
     </script>
 </body>
 </html>

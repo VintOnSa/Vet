@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
-{% load static %}
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="https://i.imgur.com/tAz9ddU.png" type="image/png">
     <title>Sistema Veterinaria Municipal — San Joaquín</title>
 
     <!-- jQuery y jQuery Validate (necesarios para validaciones) -->
@@ -13,7 +13,7 @@
     <!-- Exportación a PDF y Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -379,7 +379,7 @@
         <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 flex w-72 -translate-x-full flex-col bg-navy-950 text-slate-300 shadow-2xl transition-transform lg:translate-x-0">
             <div class="border-b border-white/10 p-4">
                 <div class="flex items-center gap-3">
-                    <img src="{% static 'img/logo.png' %}"  style="width: 70px; height: 70px;">
+                    <img src="https://i.imgur.com/dyVBmhy.png"  style="width: 70px; height: 70px;">
                     <div>
                         <p class="text-xs text-blue-300">Municipalidad de San Joaquín</p>
                         <h1 class="font-black text-white">Veterinaria Municipal</h1>
@@ -454,12 +454,19 @@
                             <div class="xl:col-span-2">
                                 <div class="mb-3 flex items-center justify-between">
                                     <div>
-                                        <h3 class="font-bold text-slate-900">Resumen</h3>
-                                        <p class="text-sm text-slate-500">Ultimas atenciones registradas en el sistema</p>
+                                        <h3 class="font-bold text-slate-900">Hoy</h3>
+                                        <p class="text-sm text-slate-500">Agendas para hoy:</p>
                                     </div>
                                     <button onclick="showModule('agenda')" class="text-sm font-semibold text-blue-600">Ver todas →</button>
                                 </div>
-                                <div id="dashboardAgenda" class="space-y-3"></div>
+                                <div id="dashboardAgendaHoy" class="space-y-3"></div>
+                                <div class="mt-3 mb-3 flex items-center justify-between">
+                                    <div>
+                                        <h3 class="font-bold text-slate-900">Proximas</h3>
+                                        <p class="text-sm text-slate-500">Proximas agendas:</p>
+                                    </div>
+                                </div>
+                                <div id="dashboardAgendaProximos" class="space-y-3"></div>
                             </div>
                             <div>
                                 <h3 class="mb-3 font-bold text-slate-900">Acciones rápidas</h3>
@@ -492,16 +499,6 @@
                 <!-- MÓDULO AGENDA -->
                 <!-- ========================================================== -->
                 <section id="module-agenda" class="module space-y-6">
-                    <div class="flex flex-col justify-between gap-3 md:flex-row md:items-center">
-                        <div>
-                            <h3 class="text-2xl font-black text-navy-800">Agenda</h3>
-                            <p class="text-sm text-slate-500">Calendario y atenciones programadas.</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="openQuickModal()" class="rounded-xl border bg-white px-4 py-2 text-sm font-bold">⚡ Ingreso rápido</button>
-                            <button onclick="openAgendaModal()" class="rounded-xl bg-navy-700 px-4 py-2 text-sm font-bold text-white">+ Agendar</button>
-                        </div>
-                    </div>
                     <div class="rounded-3xl border bg-white p-5 shadow-sm">
                         <div class="flex items-center justify-between">
                             <button id="calPrev" class="rounded-xl border px-4 py-2">←</button>
@@ -628,6 +625,7 @@
                 <button onclick="closeModal('modalAgenda')">✕</button>
             </div>
             <form id="FormAgendar" onsubmit="return false;" data-tipo="Creacion" class="grid gap-5 p-6 md:grid-cols-2">
+                <input name="origen" type="hidden" value="Agenda">
                 <div class="md:col-span-2">
                     <label>Paciente</label>
                     <input id="agendaPatientSearch" name="paciente_search" autocomplete="off" placeholder="Buscar nombre o chip..." />
@@ -694,6 +692,7 @@
                 <button onclick="closeModal('modalQuick')">✕</button>
             </div>
             <form id="FormIngresoRapido" onsubmit="return false;" data-tipo="Creacion" class="space-y-5 p-6">
+                <input name="origen" type="hidden" value="Ingreso">
                 <div>
                     <label>Paciente</label>
                     <input id="quickPatientSearch" placeholder="Buscar nombre o chip..." />
@@ -1341,15 +1340,164 @@
         // ============================================================
         // EXPORTACIÓN A PDF / EXCEL
         // ============================================================
-        function exportExcel(filename, sheets) {
+        async function exportExcel(filename, sheets) {
             const list = Array.isArray(sheets) ? sheets : [sheets];
-            const wb = XLSX.utils.book_new();
+
+            const workbook = new ExcelJS.Workbook();
+
             list.forEach(s => {
-                const ws = XLSX.utils.aoa_to_sheet([s.headers, ...s.rows]);
-                XLSX.utils.book_append_sheet(wb, ws, (s.name || 'Datos').slice(0, 31));
+                const worksheet = workbook.addWorksheet(
+                    (s.name || 'Datos').slice(0, 31)
+                );
+
+                // ==========================================
+                // ENCABEZADOS
+                // ==========================================
+
+                const headerRow = worksheet.addRow(s.headers);
+
+                headerRow.height = 22;
+
+                headerRow.eachCell(cell => {
+                    cell.font = {
+                        name: 'Bahnschrift',
+                        size: 14,
+                        bold: true,
+                        color: { argb: 'FFFFFFFF' }
+                    };
+
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FF172A3D' }
+                    };
+
+                    cell.alignment = {
+                        vertical: 'middle',
+                        horizontal: 'center'
+                    };
+
+                    cell.border = {
+                        top: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        left: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+
+
+                // ==========================================
+                // DATOS
+                // ==========================================
+
+                s.rows.forEach(row => {
+                    const excelRow = worksheet.addRow(row);
+
+                    excelRow.eachCell(cell => {
+                        cell.font = {
+                            name: 'Arial',
+                            size: 12,
+                        };
+
+                        cell.alignment = {
+                            vertical: 'middle'
+                        };
+
+                        cell.border = {
+                            top: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            left: { style: 'thin' },
+                            right: { style: 'thin' }
+                        };
+                    });
+                });
+
+
+                // ==========================================
+                // ANCHO AUTOMÁTICO DE COLUMNAS
+                // ==========================================
+
+                worksheet.columns.forEach(column => {
+                    let maxLength = 0;
+
+                    column.eachCell({ includeEmpty: true }, cell => {
+                        const value = cell.value;
+
+                        if (value !== null && value !== undefined) {
+                            const length = String(value).length;
+
+                            if (length > maxLength) {
+                                maxLength = length;
+                            }
+                        }
+                    });
+
+                    // Margen adicional
+                    let width = maxLength + 13;
+
+                    // Mínimo
+                    width = Math.max(width, 12);
+
+                    // Máximo
+                    width = Math.min(width, 40);
+
+                    column.width = width;
+                });
+
+
+                // ==========================================
+                // CONGELAR ENCABEZADO
+                // ==========================================
+
+                worksheet.views = [
+                    {
+                        state: 'frozen',
+                        ySplit: 1
+                    }
+                ];
+
+                if (s.headers.length > 0 && s.rows.length > 0) {
+                    worksheet.autoFilter = {
+                        from: {
+                            row: 1,
+                            column: 1
+                        },
+                        to: {
+                            row: s.rows.length + 1,
+                            column: s.headers.length
+                        }
+                    };
+                }
             });
-            XLSX.writeFile(wb, `${filename}.xlsx`);
+
+
+            // ==========================================
+            // GENERAR ARCHIVO
+            // ==========================================
+
+            const buffer = await workbook.xlsx.writeBuffer();
+
+            const blob = new Blob(
+                [buffer],
+                {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                }
+            );
+
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+
+            link.href = url;
+            link.download = `${filename}.xlsx`;
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            URL.revokeObjectURL(url);
         }
+
 
         function exportPDF(filename, title, sections) {
             const { jsPDF } = window.jspdf;
@@ -1376,8 +1524,8 @@
                     head: [sec.headers],
                     body: sec.rows,
                     startY: y,
-                    styles: { fontSize: 8, cellPadding: 2 },
-                    headStyles: { fillColor: [23, 42, 61] },
+                    styles: { fontSize: 8, cellPadding: 2, textColor: [0, 0, 0]},
+                    headStyles: { fillColor: [23, 42, 61], textColor: [255, 255, 255] },
                     margin: { left: 14, right: 14 }
                 });
                 y = doc.lastAutoTable.finalY + 10;
@@ -1440,6 +1588,7 @@
                     administracion: 'Administración'
                 } [m] || m;
             }
+            
             if (m === 'administracion' && typeof backAdminHome === 'function') backAdminHome();
             closeSidebar();
         }
@@ -1471,7 +1620,7 @@
         let hours = [];
         let vaccines = [];
 
-        const PAGE_SIZE = 10;
+        const PAGE_SIZE = 15;
         const pages = {
             patients: 1,
             agenda: 1,
@@ -1687,16 +1836,16 @@ async function cargarDatos() {
             }
 
             const cards = [
-                ['Citas de hoy', citasHoyCount, `${citasHoyAtendidas} atendidas`, 'blue'],
-                ['Pendientes', pendientes, pendientesTxt, 'amber'],
-                ['Pacientes inscritos', pacientesTotal, 'Registro municipal', 'slate'],
-                ['Controles este mes', controlesMes, controlesTxt, 'indigo']
+                ['Citas de hoy', citasHoyCount, `${citasHoyAtendidas} atendidas`, 'blue', 'inicio'],
+                ['Pendientes', pendientes, pendientesTxt, 'amber', 'inicio'],
+                ['Pacientes inscritos', pacientesTotal, 'Registro municipal', 'slate', 'pacientes'],
+                ['Controles este mes', controlesMes, controlesTxt, 'indigo', 'agenda']
             ];
 
             const statsEl = byId('stats');
             if (statsEl) {
                 statsEl.innerHTML = cards.map(x =>
-                    `<div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                    `<div onclick="showModule('${x[4]}')" class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm cursor-pointer transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
                         <p class="text-sm font-medium text-slate-500">${x[0]}</p>
                         <p class="mt-2 text-3xl font-black text-slate-950">${x[1]}</p>
                         <p class="mt-1 text-xs font-medium ${x[3] === 'amber' ? 'text-amber-600' : x[3] === 'indigo' ? 'text-indigo-600' : x[3] === 'blue' ? 'text-emerald-600' : 'text-slate-500'}">${x[2]}</p>
@@ -1706,7 +1855,7 @@ async function cargarDatos() {
         }
 
         function card(a) {
-            return `<button onclick="detailAgenda(${a.id})" class="flex w-full items-center gap-4 rounded-2xl border p-4 text-left hover:bg-slate-50">
+            return `<button onclick="detailAgenda(${a.id})" class="flex w-full items-center bg-white shadow-md gap-4 rounded-2xl border p-4 text-left hover:bg-slate-50 hover:border-blue-200">
                 <div class="rounded-xl bg-blue-50 px-3 py-2 font-black text-navy-800">${esc(a.hora)}</div>
                 <div class="min-w-0 flex-1">
                     <b>${esc(a.paciente.nombre)}</b>
@@ -1717,12 +1866,33 @@ async function cargarDatos() {
         }
 
         function renderDashboard() {
-            let list = [...DashboardAppointments].sort((a, b) =>
-                `${a.fecha}${a.hora}`.localeCompare(`${b.fecha}${b.hora}`)
-            ).slice(0, 5);
-            const el = byId('dashboardAgenda');
-            if (el) {
-                el.innerHTML = list.map(card).join('') || '<p class="text-sm text-slate-400">No hay agendas.</p>';
+            const hoy = new Date().toISOString().split('T')[0];
+
+            const hoyAppointments = [...DashboardAppointments]
+                .filter(a => a.fecha === hoy)
+                .sort((a, b) =>
+                    `${a.fecha}${a.hora}`.localeCompare(`${b.fecha}${b.hora}`)
+                )
+                .slice(0, 5);
+
+            const proximosAppointments = [...DashboardAppointments]
+                .filter(a => a.fecha > hoy)
+                .sort((a, b) =>
+                    `${a.fecha}${a.hora}`.localeCompare(`${b.fecha}${b.hora}`)
+                )
+                .slice(0, 5);
+
+            const elHoy = byId('dashboardAgendaHoy');
+            const elProximos = byId('dashboardAgendaProximos');
+
+            if (elHoy) {
+                elHoy.innerHTML = hoyAppointments.map(card).join('') ||
+                    '<p class="text-sm text-slate-400">No hay agendas para hoy.</p>';
+            }
+
+            if (elProximos) {
+                elProximos.innerHTML = proximosAppointments.map(card).join('') ||
+                    '<p class="text-sm text-slate-400">No hay próximas agendas.</p>';
             }
         }
 
@@ -1763,7 +1933,15 @@ async function cargarDatos() {
             if (calendarEl) calendarEl.innerHTML = html;
         }
 
-        
+        function selectDay(d) {
+            selectedDay = d;
+            const agendaSubtitle = byId('agendaSubtitle');
+            if (agendaSubtitle) {
+                agendaSubtitle.textContent = `${dateCL(d)} · ${VetAppointments.filter(a => a.fecha === d).length} agenda(s)`;
+            }
+            openDayAgendaModal(d);
+        }
+
 
         function openDayAgendaModal(d) {
             let list = VetAppointments.filter(a => a.fecha === d).sort((a, b) => String(a.hora).localeCompare(String(b.hora)));
@@ -1844,7 +2022,7 @@ async function cargarDatos() {
             const headers = ['Chip', 'Nombre', 'Especie', 'Raza', 'Género', 'Edad', 'Peso', 'Dueño', 'RUT Dueño'];
             const rows = list.map(p => [
                 p.nchip, p.nombre, p.especie, p.raza, p.genero,
-                `${p.edad || 0}a ${p.meses || 0}m`, p.peso || '',
+                `${p.edad || 0} años ${p.meses || 0} meses`, `${p.peso}kg` || '',
                 p.dueno?.name || p.dueno?.nombre || '', p.dueno?.rut || ''
             ]);
             return { headers, rows };
@@ -1975,7 +2153,7 @@ async function cargarDatos() {
             if (n <= 1) { box.innerHTML = ''; return; }
 
             box.innerHTML = Array.from({ length: n }, (_, i) =>
-                `<button data-p="${i + 1}" class="rounded-xl px-3 py-2 text-sm font-bold ${i + 1 === page ? 'bg-navy-700 text-white' : 'border'}">${i + 1}</button>`
+                `<button data-p="${i + 1}" class="rounded-xl px-3 py-2 me-2 text-sm font-bold ${i + 1 === page ? 'bg-navy-700 text-white' : 'border'}">${i + 1}</button>`
             ).join('');
 
             box.querySelectorAll('button').forEach(b => b.onclick = () => cb(+b.dataset.p));
@@ -2992,7 +3170,10 @@ async function cargarDatos() {
                 if (f.elements.especie) f.elements.especie.value = p.especie || '';
                 fillBreeds(p.especie);
                 if (p.raza) selectPatientBreed(p.raza);
-                if (f.elements.genero) f.elements.genero.value = p.genero || '';
+                if (f.elements.genero) {
+                    f.elements.genero.value = p.genero || '';
+                    generoPaciente.dispatchEvent(new Event("change"));
+                }
                 if (f.elements.edad) f.elements.edad.value = p.edad ?? '';
                 if (f.elements.meses) f.elements.meses.value = p.meses ?? '';
                 if (f.elements.peso) f.elements.peso.value = p.peso || '';
@@ -3346,7 +3527,9 @@ async function cargarDatos() {
                     type === 'razas' ?
                     'Buscar por nombre de raza...' :
                     type === 'agendas' ? 
-                    'Buscar por paciente, nchip, procedimiento, veterinario o estado...':
+                    'Buscar por paciente, nchip, fecha, procedimiento, veterinario o estado...':
+                    type === 'procedimientos' ?
+                    'Buscar por nombre o precio...':
                     'Buscar...';
             }
 
@@ -3419,16 +3602,19 @@ async function cargarDatos() {
             }
             if (type === 'inventario' && window.adminInventoryFilter) {
                 list = list.filter(x => x.tipo === window.adminInventoryFilter);
+            } 
+            if (type === 'bodegas') {
+                list = list.sort((a,b) => String(a.codigo).localeCompare(String(b.codigo)));
             }
             if (type === 'agendas') {
                 list = list.filter(x => {
-                    const ag = [x.paciente?.nombre, x.paciente?.nchip, x.procedimiento, x.veterinario, x.estado]
+                    const ag = [x.paciente?.nombre, x.paciente?.nchip, x.fecha, x.procedimiento, x.veterinario, x.estado]
                         .filter(Boolean)
                         .join(' ')
                         .toLowerCase();
                     return ag.includes(q);
                 });
-                list = list.sort((a,b) => String(a.fecha, a.hora).localeCompare(String(b.fecha,b.hora)));
+                list = list.sort((a,b) => String(b.fecha, b.hora).localeCompare(String(a.fecha, a.hora)));
             } else {
                 list = list.filter(x =>
                     JSON.stringify(x).toLowerCase().includes(q)
@@ -4507,7 +4693,6 @@ async function cargarDatos() {
                     console.log('FormIngresoRapido validado, enviando...');
                     let p = Object.fromEntries(new FormData(form));
                     let n = new Date();
-                    p.ingreso = 'Ingreso';
                     p.fecha = iso(n);
                     p.hora = n.toTimeString().slice(0, 5);
                     p.estado = 'Pendiente';
